@@ -86,16 +86,4 @@ std::streampos FileInputStream::doSeek(
   return mStreambuf->pubseekoff(offset, dir);
 }
 
-HuffmanDecodedInputStream::HuffmanDecodedInputStream(InputStream& inputStream)
-  : mInputStream(inputStream)
-{
-}
-
-std::streamsize HuffmanDecodedInputStream::doRead(
-    char* buffer, std::streamsize n)
-{
-  // FIXME: implement!
-  return 0;
-}
-
 } /* namespace refinery */

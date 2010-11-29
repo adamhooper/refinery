@@ -4,8 +4,21 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <vector>
+
+#include <climits> /* really we want cstdint, but it's not standard yet */
+
+typedef unsigned short uint16_t;
 
 namespace refinery {
+
+# if ULONG_MAX == 0xffffffff
+  typedef unsigned long   uint_fast32_t;
+# elif UINT_MAX == 0xffffffff
+  typedef unsigned int    uint_fast32_t;
+# else
+#  error could not define uint_fast32_t
+# endif
 
 class InputStream {
 public:
@@ -46,14 +59,130 @@ protected:
   virtual std::streampos doSeek(std::streamoff offset, std::ios::seekdir dir);
 };
 
-class HuffmanDecodedInputStream : public InputStream {
+/**
+ * Huffman decoder which reads from an input stream.
+ *
+ * When using a HuffmanDecoder on an InputStream, do not read from the input
+ * stream as well: if you do, the next time the HuffmanDecoder reads from it
+ * the bits will not match up with the earlier ones. Instead, do something like
+ * this:
+ *
+ * inputStream.seek(100, std::ios::beg);
+ * {
+ *   HuffmanDecoder decoder(inputStream);
+ *   uint16_t value(decoder.nextValue());
+ *   ...
+ * }
+ * inputStream.read(buffer2, 1024);
+ *
+ * The destructor (invoked when decoder goes out of scope) must be called
+ * before inputStream.read() or the stream may not be at the proper position.
+ */
+class HuffmanDecoder {
+  typedef std::vector<uint16_t> TableType;
+
   InputStream& mInputStream;
+  int mMaxBits;
+  TableType mTable;
+  uint_fast32_t mBuffer; // some bits, in the least-significant part of the int
+  int mBufferLength; // number of bits
+
+  void init(const uint16_t initializer[])
+  {
+    const uint16_t* counts = &initializer[0];
+    const uint16_t* leaf = &initializer[16];
+
+    for (mMaxBits = 16; !counts[mMaxBits-1]; mMaxBits--) {}
+
+    mTable.reserve(1 << mMaxBits);
+
+    for (int h = 0, len = 0; len < mMaxBits; len++) {
+      for (int i = 0; i < counts[len]; i++, leaf++) {
+        for (int j = 0; j < 1 << (mMaxBits - len - 1); j++) {
+          mTable[h++] = (len + 1) << 8 | *leaf;
+        }
+      }
+    }
+  }
 
 public:
-  HuffmanDecodedInputStream(InputStream& inputStream);
+  /**
+   * Creates a Huffman decoder stream.
+   *
+   * initializer is a 32-uchar representation of the Huffman tree. The first
+   * 16 bits specify how many codes should be 1-bit, 2-bit, etc; the last 16
+   * bits are the values.
+   *
+   * For example, if the source is
+   *
+   * { 0,1,4,2,3,1,2,0,0,0,0,0,0,0,0,0,
+   * 0x04,0x03,0x05,0x06,0x02,0x07,0x01,0x08,0x09,0x00,0x0a,0x0b,0xff  },
+   *
+   * then the code is
+   *
+   * 00              0x04
+   * 010             0x03
+   * 011             0x05
+   * 100             0x06
+   * 101             0x02
+   * 1100            0x07
+   * 1101            0x01
+   * 11100           0x08
+   * 11101           0x09
+   * 11110           0x00
+   * 111110          0x0a
+   * 1111110         0x0b
+   * 1111111         0xff
+   */
+  HuffmanDecoder(InputStream& inputStream, const uint16_t initializer[])
+      : mInputStream(inputStream), mBuffer(0), mBufferLength(0)
+  {
+    this->init(initializer);
+  }
 
-protected:
-  virtual std::streamsize doRead(char* buffer, std::streamsize n);
+  /**
+   * Rewinds a byte or so, so the next byte the InputStream reads will be the
+   * first one that wasn't decoded.
+   */
+  ~HuffmanDecoder()
+  {
+    mInputStream.seek(-mBufferLength/3, std::ios::cur);
+  }
+
+  uint16_t nextValue(int nBits = -1, bool useTable = true)
+  {
+    static const uint_fast32_t TRUNCATE_LEFT[] = {
+      0x0000,
+      0x0001, 0x0003, 0x0007, 0x000f,
+      0x001f, 0x003f, 0x007f, 0x00ff,
+      0x01ff, 0x03ff, 0x07ff, 0x0fff,
+      0x1fff, 0x3fff, 0x7fff, 0xffff
+    };
+
+    if (nBits < 0) nBits = mMaxBits;
+    if (nBits <= 0) return 0;
+
+    while (mBufferLength < nBits) {
+      char c;
+      if (!mInputStream.read(&c, 1)) break;
+      mBuffer = mBuffer << 8 | static_cast<unsigned char>(c);
+      mBufferLength += 8;
+    }
+
+    int key = (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
+
+    uint16_t value;
+    if (useTable) {
+      uint16_t entry(mTable[key]);
+      value = entry & 0xff; // FIXME really, dcraw?
+      mBufferLength -= (entry >> 8);
+    } else {
+      value = static_cast<uint16_t>(key);
+      mBufferLength -= nBits;
+    }
+
+    return value;
+  }
 };
 
 };

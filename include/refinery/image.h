@@ -1,9 +1,7 @@
 #ifndef _REFINERY_IMAGE_H
 #define _REFINERY_IMAGE_H
 
-#include <map>
-#include <string>
-#include <utility>
+#include <vector>
 
 namespace refinery {
 
@@ -35,49 +33,46 @@ template<typename T> struct RGB {
   RGB() : r(0), g(0), b(0) {}
 };
 
-template<class T> class Image {
-  T* mPixels;
+class Image {
+public:
+  typedef std::vector<unsigned short> PixelsType;
+  typedef unsigned short (*Row3Type)[3];
+  typedef const unsigned short (*ConstRow3Type)[3];
+
+private:
   int mWidth;
   int mHeight;
+  int mBpp; /* bytes per pixel */
+  PixelsType mPixels;
+
 public:
+  Image(int width, int height);
+  ~Image();
 
   int width() const { return mWidth; }
   int height() const { return mHeight; }
+  int bytesPerPixel() const { return mBpp; }
+  void setBytesPerPixel(int bpp) { mBpp = bpp; }
+  const unsigned short* pixels() const { return &mPixels[0]; }
+  PixelsType& pixels() { return mPixels; }
 
-  const T& operator[](const Point& point) const {
-    return mPixels[point.y * mWidth + point.x];
+  ConstRow3Type pixelsRow3(int row) const {
+    return reinterpret_cast<ConstRow3Type>(&mPixels[row * mWidth * 3]);
   }
-
-  T& operator[](const Point& point) {
-    return mPixels[point.y * mWidth + point.x];
-  }
-};
-
-class Metadata {
-  std::map<std::string, std::string> mData;
-
-public:
-  const std::string& operator[](const std::string& key) const {
-    return mData[key];
-  }
-  std::string& operator[](const std::string& key) {
-    return mData[key];
-  }
-
-  std::string& insert(const std::string& key, std::string& value) {
-    mData.insert(std::pair(key, value));
+  Row3Type pixelsRow3(int row) {
+    return reinterpret_cast<Row3Type>(&mPixels[row * mWidth * 3]);
   }
 };
 
-template<class T> class ImageTile<T> {
-  Metadata mMetadata;
-  Image<T> mImage;
+#if 0
+class ImageTile {
+  Image mImage;
   Point mFirstPixel;
   int mWidth;
   int mHeight;
 
 public:
-  ImageTile(const Image<T>& image, const Point& firstPoint, int width, int height)
+  ImageTile(const Image& image, const Point& firstPoint, int width, int height)
     : mImage(image), mFirstPixel(firstPoint), mWidth(width), mHeight(height) {}
 
   Point absoluteToRelative(const Point& absolute) const {
@@ -87,29 +82,8 @@ public:
   Point relativeToAbsolute(const Point& relative) const {
     return relative + mFirstPixel;
   }
-
-  const T& operator[](const Point& point) const {
-    Point absolute(relativeToAbsolute(point));
-    return mImage[absolute];
-  }
-
-  T& operator[](const Point& point) {
-    Point absolute(relativeToAbsolute(point));
-    return mImage[absolute];
-  }
 };
-
-class ImageReader_private;
-
-class ImageReader {
-  ImageReader_private* mPrivate;
-
-public:
-  ImageReader();
-  ~ImageReader();
-
-  Image* readImage(InputStream& istream);
-};
+#endif
 
 }; /* namespace refinery */
 
