@@ -79,7 +79,11 @@ protected:
  * before inputStream.read() or the stream may not be at the proper position.
  */
 class HuffmanDecoder {
-  typedef std::vector<uint16_t> TableType;
+  typedef struct {
+    unsigned char len;
+    unsigned char leaf;
+  } EntryType;
+  typedef std::vector<EntryType> TableType;
 
   InputStream& mInputStream;
   int mMaxBits;
@@ -87,10 +91,10 @@ class HuffmanDecoder {
   uint_fast32_t mBuffer; // some bits, in the least-significant part of the int
   int mBufferLength; // number of bits
 
-  void init(const uint16_t initializer[])
+  void init(const unsigned char initializer[])
   {
-    const uint16_t* counts = &initializer[0];
-    const uint16_t* leaf = &initializer[16];
+    const unsigned char* counts = &initializer[0];
+    const unsigned char* leaf = &initializer[16];
 
     for (mMaxBits = 16; !counts[mMaxBits-1]; mMaxBits--) {}
 
@@ -99,7 +103,9 @@ class HuffmanDecoder {
     for (int h = 0, len = 0; len < mMaxBits; len++) {
       for (int i = 0; i < counts[len]; i++, leaf++) {
         for (int j = 0; j < 1 << (mMaxBits - len - 1); j++) {
-          mTable[h++] = (len + 1) << 8 | *leaf;
+          mTable[h].len = len + 1;
+          mTable[h].leaf = *leaf;
+          h++;
         }
       }
     }
@@ -134,7 +140,7 @@ public:
    * 1111110         0x0b
    * 1111111         0xff
    */
-  HuffmanDecoder(InputStream& inputStream, const uint16_t initializer[])
+  HuffmanDecoder(InputStream& inputStream, const unsigned char initializer[])
       : mInputStream(inputStream), mBuffer(0), mBufferLength(0)
   {
     this->init(initializer);
@@ -169,13 +175,14 @@ public:
       mBufferLength += 8;
     }
 
-    int key = (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
+    unsigned int key =
+        (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
 
     uint16_t value;
     if (useTable) {
-      uint16_t entry(mTable[key]);
-      value = entry & 0xff; // FIXME really, dcraw?
-      mBufferLength -= (entry >> 8);
+      const EntryType& entry(mTable[key]);
+      value = entry.leaf;
+      mBufferLength -= entry.len;
     } else {
       value = static_cast<uint16_t>(key);
       mBufferLength -= nBits;

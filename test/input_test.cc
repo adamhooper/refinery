@@ -115,7 +115,7 @@ TEST(FileInputStreamTest, Seek) {
 }
 
 TEST(HuffmanDecoderTest, NextValue) {
-  const unsigned short treeSpec[] = { // Nikon 12-bit lossy
+  const unsigned char treeSpec[] = { // Nikon 12-bit lossy
     0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,
     5,4,3,6,2,7,1,0,8,9,11,10,12,0
   };

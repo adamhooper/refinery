@@ -56,7 +56,7 @@ namespace unpack {
      */
     HuffmanDecoder* createDecoder(InputStream& is, int key)
     {
-      static const uint16_t nikon_tree[][32] = { // dcraw.c
+      static const unsigned char nikon_tree[][32] = { // dcraw.c
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy */
           5,4,3,6,2,7,1,0,8,9,11,10,12 },
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy after split */
