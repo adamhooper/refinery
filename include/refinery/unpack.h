@@ -1,12 +1,14 @@
 #ifndef _REFINERY_UNPACK_H
 #define _REFINERY_UNPACK_H
 
+#include <cstddef>
 #include <vector>
 
 namespace refinery {
 
 class InputStream;
-class Image;
+template<typename T, std::size_t N> class TypedImage;
+typedef TypedImage<unsigned short, 3> Image;
 
 struct UnpackSettings {
   enum ImageFormat {

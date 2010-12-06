@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <png.h>
+#include <cstdio>
 
 #include "refinery/unpack.h"
 
@@ -95,12 +96,12 @@ TEST(ImageReaderTest, NikonD5000) {
   // Spot-check: first pixel, last pixel, a quad in the middle
   const unsigned short (*row)[3];
 
-  row = image.pixelsRow3(0);
+  row = image.pixelsRow(0);
   EXPECT_EQ(0, row[0][0]) << "row 0";
   EXPECT_EQ(1127, row[0][1]) << "row 0";
   EXPECT_EQ(0, row[0][2]) << "row 0";
 
-  row = image.pixelsRow3(312);
+  row = image.pixelsRow(312);
   EXPECT_EQ(0, row[512][0]) << "row 312";
   EXPECT_EQ(1522, row[512][1]) << "row 312";
   EXPECT_EQ(0, row[512][2]) << "row 312";
@@ -109,7 +110,7 @@ TEST(ImageReaderTest, NikonD5000) {
   EXPECT_EQ(0, row[513][1]) << "row 312";
   EXPECT_EQ(1704, row[513][2]) << "row 312";
 
-  row = image.pixelsRow3(313);
+  row = image.pixelsRow(313);
   EXPECT_EQ(604, row[512][0]) << "row 313";
   EXPECT_EQ(0, row[512][1]) << "row 313";
   EXPECT_EQ(0, row[512][2]) << "row 313";
@@ -118,28 +119,10 @@ TEST(ImageReaderTest, NikonD5000) {
   EXPECT_EQ(1529, row[513][1]) << "row 313";
   EXPECT_EQ(0, row[513][2]) << "row 313";
 
-  row = image.pixelsRow3(2867);
+  row = image.pixelsRow(2867);
   EXPECT_EQ(0, row[4309][0]) << "row 2867";
   EXPECT_EQ(851, row[4309][1]) << "row 2867";
   EXPECT_EQ(0, row[4309][2]) << "row 2867";
-
-#if 0
-  // I'm lazy. Here's how I tested that this all works.
-  FILE *fp = fopen("out.png", "wb");
-  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
-  png_infop info_ptr = png_create_info_struct(png_ptr);
-  png_init_io(png_ptr, fp);
-  png_set_IHDR(png_ptr, info_ptr, settings.width, settings.height, 16, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-  png_write_info(png_ptr, info_ptr);
-
-  std::vector<png_byte*> ptrs;
-  for (int row = 0; row < settings.height; row++) {
-    ptrs.push_back(reinterpret_cast<png_byte*>(&(image.pixelsRow3(row)[0])));
-  }
-  png_write_image(png_ptr, &ptrs[0]);
-  png_write_end(png_ptr, info_ptr);
-  png_destroy_write_struct(&png_ptr, &info_ptr);
-#endif
 };
 
 }

@@ -1,89 +1,101 @@
 #ifndef _REFINERY_IMAGE_H
 #define _REFINERY_IMAGE_H
 
+#include <cstddef>
 #include <vector>
 
 namespace refinery {
 
 struct Point {
   /* Starting at top-left */
-  int x;
-  int y;
+  int row;
+  int col;
 
-  Point() : x(0), y(0) {}
-  Point(int x, int y) : x(x), y(y) {}
-  Point(const Point& point) : x(point.x), y(point.y) {}
+  Point() : row(0), col(0) {}
+  Point(int row, int col) : row(row), col(col) {}
+  Point(const Point& point) : row(point.row), col(point.col) {}
 
   Point operator+(const Point& point) const {
-    return Point(x + point.x, y + point.y);
+    return Point(row + point.row, col + point.col);
   }
 
   Point operator-(const Point& point) const {
-    return Point(x - point.x, y - point.y);
+    return Point(row - point.row, col - point.col);
   }
 };
 
-template<typename T> struct RGB {
-  T r;
-  T g;
-  T b;
-
-  RGB(const T& r, const T& g, const T& b) : r(r), g(g), b(b) {}
-  RGB(const RGB& rgb) : r(rgb.r), g(rgb.g), b(rgb.b) {}
-  RGB() : r(0), g(0), b(0) {}
-};
-
-class Image {
+template<typename T, std::size_t N = 3> class TypedImage {
 public:
-  typedef std::vector<unsigned short> PixelsType;
-  typedef unsigned short (*Row3Type)[3];
-  typedef const unsigned short (*ConstRow3Type)[3];
+  typedef T ValueType;
+  typedef std::vector<ValueType> PixelsType;
+  typedef ValueType (*RowType)[N];
+  typedef const ValueType (*ConstRowType)[N];
+  typedef ValueType* PixelType;
+  typedef const ValueType* ConstPixelType;
+  typedef unsigned int Color;
+
+  static const Color R = 0;
+  static const Color G = 1;
+  static const Color B = 2;
 
 private:
   int mWidth;
   int mHeight;
   int mBpp; /* bytes per pixel */
+  int mFilters;
   PixelsType mPixels;
 
 public:
-  Image(int width, int height);
-  ~Image();
+  TypedImage(int width = 0, int height = 0)
+    : mWidth(width), mHeight(height), mBpp(0), mFilters(0) {}
 
   int width() const { return mWidth; }
   int height() const { return mHeight; }
   int bytesPerPixel() const { return mBpp; }
+  int filters() const { return mFilters; }
   void setBytesPerPixel(int bpp) { mBpp = bpp; }
-  const unsigned short* pixels() const { return &mPixels[0]; }
+  void setFilters(int filters) { mFilters = filters; }
+  template<class U> void importAttributes(const TypedImage<U>& other) {
+    mWidth = other.width();
+    mHeight = other.height();
+    mBpp = other.bytesPerPixel();
+    mFilters = other.filters();
+  }
+
+  Color colorAtPoint(const Point& point) const {
+    int row = point.row;
+    int col = point.col;
+    return (mFilters >> (((row << 1 & 14) | (col & 1)) << 1)) & 3;
+  }
+
+  const PixelsType& constPixels() const { return mPixels; }
   PixelsType& pixels() { return mPixels; }
 
-  ConstRow3Type pixelsRow3(int row) const {
-    return reinterpret_cast<ConstRow3Type>(&mPixels[row * mWidth * 3]);
+  ConstRowType constPixelsRow(int row) const {
+    return reinterpret_cast<ConstRowType>(&mPixels[row * mWidth * N]);
   }
-  Row3Type pixelsRow3(int row) {
-    return reinterpret_cast<Row3Type>(&mPixels[row * mWidth * 3]);
-  }
-};
-
-#if 0
-class ImageTile {
-  Image mImage;
-  Point mFirstPixel;
-  int mWidth;
-  int mHeight;
-
-public:
-  ImageTile(const Image& image, const Point& firstPoint, int width, int height)
-    : mImage(image), mFirstPixel(firstPoint), mWidth(width), mHeight(height) {}
-
-  Point absoluteToRelative(const Point& absolute) const {
-    return absolute - mFirstPixel;
+  RowType pixelsRow(int row) {
+    return reinterpret_cast<RowType>(&mPixels[row * mWidth * N]);
   }
 
-  Point relativeToAbsolute(const Point& relative) const {
-    return relative + mFirstPixel;
+  PixelType pixel(const Point& point) {
+    int row = point.row;
+    int col = point.col;
+    return &mPixels[(row * mWidth + col) * N];
+  }
+  ConstPixelType constPixel(const Point& point) const {
+    int row = point.row;
+    int col = point.col;
+    return &mPixels[(row * mWidth + col) * N];
   }
 };
-#endif
+
+template class TypedImage<unsigned short>;
+template class TypedImage<short>;
+
+typedef TypedImage<unsigned short, 3> RGBImage;
+typedef RGBImage Image;
+typedef TypedImage<short, 3> LABImage;
 
 }; /* namespace refinery */
 

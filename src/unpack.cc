@@ -92,7 +92,7 @@ namespace unpack {
       image.pixels().assign(settings.height * settings.width * 3, 0);
 
       for (int row = 0; row < settings.height; row++) {
-        Image::Row3Type rowPixels(image.pixelsRow3(row));
+        Image::RowType rowPixels(image.pixelsRow(row));
 
         if (settings.split && row == settings.split) {
           decoder.reset(getDecoder2(is, settings));
@@ -192,6 +192,8 @@ Image* ImageReader::readImage(
   std::auto_ptr<unpack::Unpacker> unpacker(
       unpack::UnpackerFactory::createUnpacker(settings));
   ret->setBytesPerPixel(unpacker->bytesPerPixel());
+  ret->setFilters(settings.filters & (~((settings.filters & 0x55555555) << 1)));
+
   unpacker->unpack(istream, settings, *ret);
 
   return ret.release();
