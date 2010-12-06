@@ -23,32 +23,60 @@ TEST(InterpolatorTest, AHDInterpolate) {
   refinery::Interpolator interpolator(refinery::Interpolator::INTERPOLATE_AHD);
   interpolator.interpolate(image);
 
-  using refinery::Point;
-  refinery::Image::PixelType p0_0(image.pixel(Point(0, 0))); // corner
-  refinery::Image::PixelType p1_1(image.pixel(Point(1, 1))); // still in border
-  refinery::Image::PixelType p2_50(image.pixel(Point(2, 50))); // also in border
-  refinery::Image::PixelType p9_9(image.pixel(Point(9, 9))); // run-of-the-mill
-  refinery::Image::PixelType p74_224(image.pixel(Point(74, 224))); // far corner
+  refinery::Image ref(225, 75);
+  ref.setBytesPerPixel(3);
+  refinery::Image::PixelsType& pixels(ref.pixels());
+  pixels.assign(ref.width() * ref.height() * ref.bytesPerPixel(), 0);
 
-  EXPECT_EQ(209, p0_0[0]);
-  EXPECT_EQ(357, p0_0[1]);
-  EXPECT_EQ(237, p0_0[2]);
+  std::ifstream f;
+  f.open("test/files/nikon_d5000_225x75_sample_ahd16.ppm");
+  std::string _ignore;
+  std::getline(f, _ignore); // "P6"
+  std::getline(f, _ignore); // "225 75"
+  std::getline(f, _ignore); // "65535"
 
-  EXPECT_EQ(260, p1_1[0]);
-  EXPECT_EQ(423, p1_1[1]);
-  EXPECT_EQ(225, p1_1[2]);
+  struct {
+    unsigned short r;
+    unsigned short g;
+    unsigned short b;
+  } refPixel;
 
-  EXPECT_EQ(315, p2_50[0]);
-  EXPECT_EQ(524, p2_50[1]);
-  EXPECT_EQ(275, p2_50[2]);
+  int nFailures = 0;
 
-  EXPECT_EQ(391, p9_9[0]);
-  EXPECT_EQ(676, p9_9[1]);
-  EXPECT_EQ(420, p9_9[2]);
+  for (int row = 0; row < 75; row++) {
+    for (int col = 0; col < 225; col++) {
+      char msb, lsb;
+      f.get(msb);
+      f.get(lsb);
+      refPixel.r =
+          static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
+          | static_cast<unsigned char>(lsb);
+      f.get(msb);
+      f.get(lsb);
+      refPixel.g =
+          static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
+          | static_cast<unsigned char>(lsb);
+      f.get(msb);
+      f.get(lsb);
+      refPixel.b =
+          static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
+          | static_cast<unsigned char>(lsb);
 
-  EXPECT_EQ(360, p74_224[0]);
-  EXPECT_EQ(664, p74_224[1]);
-  EXPECT_EQ(588, p74_224[2]);
+      refinery::Image::PixelType p(image.pixel(refinery::Point(row, col)));
+      if (nFailures < 3) {
+        EXPECT_EQ(refPixel.r, p[0]) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.g, p[1]) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.b, p[2]) << "(" << row << ", " << col << ")";
+        if (refPixel.r != p[0] || refPixel.g != p[1] || refPixel.b != p[2]) {
+          nFailures++;
+        }
+      } else {
+        ASSERT_EQ(refPixel.r, p[0]);
+        ASSERT_EQ(refPixel.g, p[1]);
+        ASSERT_EQ(refPixel.b, p[2]);
+      }
+    }
+  }
 }
 
 }
