@@ -112,7 +112,7 @@ class HuffmanDecoder {
     }
   }
 
-  inline unsigned int getBits(unsigned int nBits)
+  inline uint16_t getBits(unsigned int nBits)
   {
     static const uint_fast32_t TRUNCATE_LEFT[] = {
       0x0000,
@@ -182,7 +182,7 @@ public:
 
   uint16_t nextHuffmanValue()
   {
-    unsigned int key = getBits(mMaxBits);
+    uint16_t key = getBits(mMaxBits);
 
     const EntryType& entry(mTable[key]);
 
@@ -194,11 +194,11 @@ public:
   {
     if (nBits <= 0) return 0;
 
-    unsigned int value = getBits(nBits);
+    uint16_t value = getBits(nBits);
 
     mBufferLength -= nBits;
 
-    return static_cast<uint16_t>(value);
+    return value;
   }
 };
 
