@@ -121,6 +121,7 @@ public:
 
 class PpmImageWriter {
   std::ostream& mOutput;
+  std::streambuf& mOutputStream;
 
   GammaCurve buildGammaCurve(const Image& image)
   {
@@ -155,27 +156,19 @@ class PpmImageWriter {
 
   void writePixel8Bit(const unsigned short (&rgb)[3])
   {
-    unsigned char s[3];
-
-    s[0] = static_cast<unsigned char>(rgb[0] >> 8);
-    s[1] = static_cast<unsigned char>(rgb[1] >> 8);
-    s[2] = static_cast<unsigned char>(rgb[2] >> 8);
-
-    mOutput.write(reinterpret_cast<char*>(s), 3);
+    mOutputStream.sputc(rgb[0] >> 8);
+    mOutputStream.sputc(rgb[1] >> 8);
+    mOutputStream.sputc(rgb[2] >> 8);
   }
 
   void writePixel16Bit(const unsigned short (&rgb)[3])
   {
-    unsigned char s[6];
-
-    s[0] = static_cast<unsigned char>(rgb[0] >> 8);
-    s[1] = static_cast<unsigned char>(rgb[0] & 0xff);
-    s[2] = static_cast<unsigned char>(rgb[1] >> 8);
-    s[3] = static_cast<unsigned char>(rgb[1] & 0xff);
-    s[4] = static_cast<unsigned char>(rgb[2] >> 8);
-    s[5] = static_cast<unsigned char>(rgb[2] & 0xff);
-
-    mOutput.write(reinterpret_cast<char*>(s), 6);
+    mOutputStream.sputc(rgb[0] >> 8);
+    mOutputStream.sputc(rgb[0] & 0xff);
+    mOutputStream.sputc(rgb[1] >> 8);
+    mOutputStream.sputc(rgb[1] & 0xff);
+    mOutputStream.sputc(rgb[2] >> 8);
+    mOutputStream.sputc(rgb[2] & 0xff);
   }
 
   void writeImageBytes8Bit(const Image& image, const GammaCurve& gammaCurve)
@@ -207,7 +200,8 @@ class PpmImageWriter {
   }
 
 public:
-  PpmImageWriter(std::ostream& output) : mOutput(output) {}
+  PpmImageWriter(std::ostream& output)
+    : mOutput(output), mOutputStream(*(output.rdbuf())) {}
 
   void writeImage(const Image& image, unsigned int colorDepth)
   {
