@@ -41,11 +41,6 @@ protected:
   virtual void doFilter(Image& image);
 };
 
-class AhdInterpolateFilter : Filter {
-protected:
-  virtual void doFilter(Image& image);
-};
-
 };
 
 #endif /* REFINERY_FILTERS_H */
