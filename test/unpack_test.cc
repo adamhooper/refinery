@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <png.h>
-#include <cstdio>
-
 #include "refinery/unpack.h"
 
 #include <memory>
@@ -153,4 +150,4 @@ TEST(ImageReaderTest, Ppm16Bit) {
   EXPECT_EQ(588, pixel74_224[2]);
 }
 
-}
+} // namespace

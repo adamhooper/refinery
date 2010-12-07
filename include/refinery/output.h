@@ -1,18 +1,21 @@
-#ifndef _REFINERY_INPUT_H
-#define _REFINERY_INPUT_H
+#ifndef _REFINERY_OUTPUT_H
+#define _REFINERY_OUTPUT_H
+
+#include <iosfwd>
 
 namespace refinery {
 
-class OutputStream {
+template<typename T, std::size_t N> class TypedImage;
+typedef TypedImage<unsigned short, 3> Image;
+
+class ImageWriter {
 public:
-  virtual void write(char* buffer, size_t n);
+  void writeImage(
+      const Image& image, std::ostream& ostream, const char* type = 0);
+  void writeImage(
+      const Image& image, const char* filename, const char* type = 0);
 };
 
-class FileOutputStream : OutputStream {
-public:
-  virtual void write(char* buffer, size_t n);
-};
+} // namespace refinery
 
-};
-
-#endif /* REFINERY_INPUT_H */
+#endif /* REFINERY_OUTPUT_H */

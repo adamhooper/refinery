@@ -202,6 +202,6 @@ public:
   }
 };
 
-};
+} // namespace refinery
 
 #endif /* REFINERY_INPUT_H */
