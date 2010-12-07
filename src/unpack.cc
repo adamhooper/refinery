@@ -4,7 +4,10 @@
 #include "refinery/input.h"
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
+#include <sstream>
+#include <string>
 
 namespace refinery {
 
@@ -18,6 +21,80 @@ namespace unpack {
 
   protected:
     /* Helper methods go here */
+  };
+
+  class PpmUnpacker : public Unpacker {
+  private:
+    void unpackHeader(InputStream& is, Image& image)
+    {
+      const int HEADER_SIZE = 22; // usually overkill
+      char buf[HEADER_SIZE];
+      is.read(buf, HEADER_SIZE);
+
+      std::string header(buf, 22);
+
+      std::istringstream headerIss(header);
+
+      std::string p6;
+      headerIss >> p6; // "P6"
+
+      unsigned short width, height;
+      headerIss >> width >> height;
+
+      unsigned short maxValue;
+      headerIss >> maxValue;
+
+      is.seek(
+          static_cast<int>(headerIss.tellg()) + 1 - HEADER_SIZE,
+          std::ios::cur);
+
+      image.setWidth(width);
+      image.setHeight(height);
+      image.setBytesPerPixel(maxValue == 65535 ? 6 : 3);
+    }
+
+    void copyShorts(InputStream& is, unsigned int nValues, Image& image)
+    {
+      Image::PixelsType::iterator it(image.pixels().begin());
+
+      for (unsigned int i = 0; i < nValues; i++, it++) {
+        char buf[2];
+        is.read(buf, 2);
+        *it = static_cast<unsigned short>(static_cast<unsigned char>(buf[0])) << 8 | static_cast<unsigned char>(buf[1]);
+      }
+    }
+
+    void copyChars(InputStream& is, unsigned int nValues, Image& image)
+    {
+      Image::PixelsType::iterator it(image.pixels().begin());
+
+      for (unsigned int i = 0; i < nValues; i++, it++)
+      {
+        char c;
+        is.read(&c, 1);
+        *it = static_cast<unsigned short>(static_cast<unsigned char>(c));
+      }
+    }
+
+  public:
+    virtual int bytesPerPixel() { return 3; }
+    virtual void unpack(
+        InputStream& is, const UnpackSettings& settings, Image& image)
+    {
+      unpackHeader(is, image);
+
+      unsigned int nValues =
+          image.width() * image.height()
+          * image.bytesPerPixel() / sizeof(Image::ValueType);
+
+      image.pixels().assign(nValues, 0);
+
+      if (image.bytesPerPixel() == 6) {
+        copyShorts(is, nValues, image);
+      } else {
+        copyChars(is, nValues, image);
+      }
+    }
   };
 
   class NefCompressedUnpacker : public Unpacker {
@@ -175,6 +252,8 @@ namespace unpack {
     static Unpacker* createUnpacker(const UnpackSettings& settings)
     {
       switch (settings.format) {
+        case UnpackSettings::FORMAT_PPM:
+          return new PpmUnpacker();
         case UnpackSettings::FORMAT_NEF_COMPRESSED_LOSSY_2:
           return new NefCompressedLossy2Unpacker();
       }

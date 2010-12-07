@@ -125,4 +125,32 @@ TEST(ImageReaderTest, NikonD5000) {
   EXPECT_EQ(0, row[4309][2]) << "row 2867";
 };
 
+TEST(ImageReaderTest, Ppm16Bit) {
+  refinery::FileInputStream fis("./test/files/nikon_d5000_225x75_sample_ahd16.ppm");
+  refinery::UnpackSettings settings; // almost ignored. FIXME improve API
+  settings.format = refinery::UnpackSettings::FORMAT_PPM;
+
+  refinery::ImageReader reader;
+
+  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fis, settings));
+  refinery::Image& image(*imagePtr);
+
+  EXPECT_EQ(101266, fis.tell());
+  EXPECT_EQ(225, image.width());
+  EXPECT_EQ(75, image.height());
+  EXPECT_EQ(6, image.bytesPerPixel());
+  EXPECT_EQ(3 * image.width() * image.height(), image.pixels().size());
+
+  // Spot-check
+  refinery::Image::PixelType pixel0_0(image.pixel(refinery::Point(0, 0)));
+  EXPECT_EQ(209, pixel0_0[0]);
+  EXPECT_EQ(357, pixel0_0[1]);
+  EXPECT_EQ(237, pixel0_0[2]);
+
+  refinery::Image::PixelType pixel74_224(image.pixel(refinery::Point(74, 224)));
+  EXPECT_EQ(360, pixel74_224[0]);
+  EXPECT_EQ(664, pixel74_224[1]);
+  EXPECT_EQ(588, pixel74_224[2]);
+}
+
 }

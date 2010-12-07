@@ -12,6 +12,7 @@ typedef TypedImage<unsigned short, 3> Image;
 
 struct UnpackSettings {
   enum ImageFormat {
+    FORMAT_PPM,
     FORMAT_NEF_COMPRESSED_LOSSY_2
   } format;
   int width;

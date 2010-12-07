@@ -55,6 +55,8 @@ public:
   int filters() const { return mFilters; }
   void setBytesPerPixel(int bpp) { mBpp = bpp; }
   void setFilters(int filters) { mFilters = filters; }
+  void setWidth(int width) { mWidth = width; }
+  void setHeight(int height) { mHeight = height; }
   template<class U> void importAttributes(const TypedImage<U>& other) {
     mWidth = other.width();
     mHeight = other.height();
