@@ -1,3 +1,4 @@
+bin/*
 obj/*.o
 obj/*.so
 test/gtest_main
