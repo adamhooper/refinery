@@ -101,12 +101,13 @@ namespace unpack {
         }
 
         for (int col = 0; col < settings.width; col++) {
-          int i = decoder->nextValue();
+          int i = decoder->nextHuffmanValue();
           int len = i & 0xf;
           int shl = i >> 4;
 
-          int diff = ((decoder->nextValue(len - shl, false) << 1) | 1)
-              << shl >> 1;
+          uint16_t bits = decoder->nextBitsValue(len - shl);
+
+          int diff = ((bits << 1) | 1) << shl >> 1;
 
           if ((diff & 1 << (len - 1)) == 0) {
             diff -= (1 << len) - !shl;

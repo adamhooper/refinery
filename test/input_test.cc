@@ -127,14 +127,14 @@ TEST(HuffmanDecoderTest, NextValue) {
 
   refinery::HuffmanDecoder decoder(bis, treeSpec);
 
-  EXPECT_EQ(0x07, decoder.nextValue());
-  EXPECT_EQ(0x4b, decoder.nextValue(7, false));
-  EXPECT_EQ(0x07, decoder.nextValue());
-  EXPECT_EQ(0x51, decoder.nextValue(7, false));
-  EXPECT_EQ(0x03, decoder.nextValue());
-  EXPECT_EQ(0x00, decoder.nextValue(3, false));
-  EXPECT_EQ(0x04, decoder.nextValue());
-  EXPECT_EQ(0x09, decoder.nextValue(4, false));
+  EXPECT_EQ(0x07, decoder.nextHuffmanValue());
+  EXPECT_EQ(0x4b, decoder.nextBitsValue(7));
+  EXPECT_EQ(0x07, decoder.nextHuffmanValue());
+  EXPECT_EQ(0x51, decoder.nextBitsValue(7));
+  EXPECT_EQ(0x03, decoder.nextHuffmanValue());
+  EXPECT_EQ(0x00, decoder.nextBitsValue(3));
+  EXPECT_EQ(0x04, decoder.nextHuffmanValue());
+  EXPECT_EQ(0x09, decoder.nextBitsValue(4));
 }
 
 } // namespace

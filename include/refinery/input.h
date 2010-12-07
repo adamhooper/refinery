@@ -2,6 +2,7 @@
 #define _REFINERY_INPUT_H
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -89,7 +90,7 @@ class HuffmanDecoder {
   int mMaxBits;
   TableType mTable;
   uint_fast32_t mBuffer; // some bits, in the least-significant part of the int
-  int mBufferLength; // number of bits
+  unsigned int mBufferLength; // number of bits
 
   void init(const unsigned char initializer[])
   {
@@ -109,6 +110,30 @@ class HuffmanDecoder {
         }
       }
     }
+  }
+
+  inline unsigned int getBits(unsigned int nBits)
+  {
+    static const uint_fast32_t TRUNCATE_LEFT[] = {
+      0x0000,
+      0x0001, 0x0003, 0x0007, 0x000f,
+      0x001f, 0x003f, 0x007f, 0x00ff,
+      0x01ff, 0x03ff, 0x07ff, 0x0fff,
+      0x1fff, 0x3fff, 0x7fff, 0xffff
+    };
+
+    if (mBufferLength < nBits) {
+      char c[2];
+      if (!mInputStream.read(c, 2)) return 0; // FIXME handle errors
+      mBuffer =
+          mBuffer << 16
+          | (static_cast<unsigned short>(static_cast<unsigned char>(c[0])) << 8)
+          | static_cast<unsigned char>(c[1]);
+      mBufferLength += 16;
+      // FIXME if we only read 1 byte, the dtor will rewind us 2
+    }
+
+    return (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
   }
 
 public:
@@ -152,43 +177,28 @@ public:
    */
   ~HuffmanDecoder()
   {
-    mInputStream.seek(-mBufferLength/3, std::ios::cur);
+    mInputStream.seek(-mBufferLength / 8, std::ios::cur);
   }
 
-  uint16_t nextValue(int nBits = -1, bool useTable = true)
+  uint16_t nextHuffmanValue()
   {
-    static const uint_fast32_t TRUNCATE_LEFT[] = {
-      0x0000,
-      0x0001, 0x0003, 0x0007, 0x000f,
-      0x001f, 0x003f, 0x007f, 0x00ff,
-      0x01ff, 0x03ff, 0x07ff, 0x0fff,
-      0x1fff, 0x3fff, 0x7fff, 0xffff
-    };
+    unsigned int key = getBits(mMaxBits);
 
-    if (nBits < 0) nBits = mMaxBits;
+    const EntryType& entry(mTable[key]);
+
+    mBufferLength -= entry.len;
+    return entry.leaf;
+  }
+
+  uint16_t nextBitsValue(unsigned int nBits)
+  {
     if (nBits <= 0) return 0;
 
-    while (mBufferLength < nBits) {
-      char c;
-      if (!mInputStream.read(&c, 1)) break;
-      mBuffer = mBuffer << 8 | static_cast<unsigned char>(c);
-      mBufferLength += 8;
-    }
+    unsigned int value = getBits(nBits);
 
-    unsigned int key =
-        (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
+    mBufferLength -= nBits;
 
-    uint16_t value;
-    if (useTable) {
-      const EntryType& entry(mTable[key]);
-      value = entry.leaf;
-      mBufferLength -= entry.len;
-    } else {
-      value = static_cast<uint16_t>(key);
-      mBufferLength -= nBits;
-    }
-
-    return value;
+    return static_cast<uint16_t>(value);
   }
 };
 
