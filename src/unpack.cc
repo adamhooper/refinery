@@ -17,7 +17,7 @@ namespace unpack {
   public:
     virtual int bytesPerPixel() { return 3; } // Output, not input
     virtual void unpack(
-        InputStream& is, const UnpackSettings& settings, Image& image) = 0;
+        std::streambuf& is, const UnpackSettings& settings, Image& image) = 0;
 
   protected:
     /* Helper methods go here */
@@ -25,11 +25,11 @@ namespace unpack {
 
   class PpmUnpacker : public Unpacker {
   private:
-    void unpackHeader(InputStream& is, Image& image)
+    void unpackHeader(std::streambuf& is, Image& image)
     {
       const int HEADER_SIZE = 22; // usually overkill
       char buf[HEADER_SIZE];
-      is.read(buf, HEADER_SIZE);
+      is.sgetn(buf, HEADER_SIZE);
 
       std::string header(buf, 22);
 
@@ -44,7 +44,7 @@ namespace unpack {
       unsigned short maxValue;
       headerIss >> maxValue;
 
-      is.seek(
+      is.pubseekoff(
           static_cast<int>(headerIss.tellg()) + 1 - HEADER_SIZE,
           std::ios::cur);
 
@@ -53,25 +53,24 @@ namespace unpack {
       image.setBytesPerPixel(maxValue == 65535 ? 6 : 3);
     }
 
-    void copyShorts(InputStream& is, unsigned int nValues, Image& image)
+    void copyShorts(std::streambuf& is, unsigned int nValues, Image& image)
     {
       Image::PixelsType::iterator it(image.pixels().begin());
 
       for (unsigned int i = 0; i < nValues; i++, it++) {
-        char buf[2];
-        is.read(buf, 2);
-        *it = static_cast<unsigned short>(static_cast<unsigned char>(buf[0])) << 8 | static_cast<unsigned char>(buf[1]);
+        uint16_t msb = static_cast<unsigned char>(is.sbumpc());
+        unsigned char lsb = static_cast<unsigned char>(is.sbumpc());
+        *it = (msb << 8) | lsb;
       }
     }
 
-    void copyChars(InputStream& is, unsigned int nValues, Image& image)
+    void copyChars(std::streambuf& is, unsigned int nValues, Image& image)
     {
       Image::PixelsType::iterator it(image.pixels().begin());
 
       for (unsigned int i = 0; i < nValues; i++, it++)
       {
-        char c;
-        is.read(&c, 1);
+        char c = is.sbumpc();
         *it = static_cast<unsigned short>(static_cast<unsigned char>(c));
       }
     }
@@ -79,7 +78,7 @@ namespace unpack {
   public:
     virtual int bytesPerPixel() { return 3; }
     virtual void unpack(
-        InputStream& is, const UnpackSettings& settings, Image& image)
+        std::streambuf& is, const UnpackSettings& settings, Image& image)
     {
       unpackHeader(is, image);
 
@@ -110,7 +109,7 @@ namespace unpack {
      * point to the first of those max-value entries.
      */
     virtual void readCurve(
-        InputStream& is, const UnpackSettings& settings, CurveType& curve,
+        std::streambuf& is, const UnpackSettings& settings, CurveType& curve,
         int& max) = 0;
     /*
      * Returns a Huffman decoder from the input stream.
@@ -118,20 +117,20 @@ namespace unpack {
      * Seek with the input stream, then read with the decoder.
      */
     virtual HuffmanDecoder* getDecoder(
-        InputStream& is, const UnpackSettings& settings) = 0;
+        std::streambuf& is, const UnpackSettings& settings) = 0;
     /*
      * For files with a "split" (after the linearization table in Exif data),
      * this is what to use after the split.
      */
     virtual HuffmanDecoder* getDecoder2(
-        InputStream& is, const UnpackSettings& settings) {
+        std::streambuf& is, const UnpackSettings& settings) {
       return getDecoder(is, settings);
     }
     /*
      * Nikons use six Huffman tables. getDecoder() and getDecoder2() can call
      * this method to create the right one.
      */
-    HuffmanDecoder* createDecoder(InputStream& is, int key)
+    HuffmanDecoder* createDecoder(std::streambuf& is, int key)
     {
       static const unsigned char nikon_tree[][32] = { // dcraw.c
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy */
@@ -150,7 +149,8 @@ namespace unpack {
     }
 
   public:
-    void unpack(InputStream& is, const UnpackSettings& settings, Image& image) {
+    void unpack(
+        std::streambuf& is, const UnpackSettings& settings, Image& image) {
       CurveType curve;
       int left_margin = 0;
       int max;
@@ -212,7 +212,7 @@ namespace unpack {
   class NefCompressedLossy2Unpacker : public NefCompressedUnpacker {
   protected:
     void readCurve(
-        InputStream& is, const UnpackSettings& settings,
+        std::streambuf& is, const UnpackSettings& settings,
         CurveType& curve, int& max)
     {
       const std::vector<unsigned short>& lin(settings.linearization_table);
@@ -236,12 +236,14 @@ namespace unpack {
       while (curve[max-2] == curve[max-1]) max--;
     }
 
-    HuffmanDecoder* getDecoder(InputStream& is, const UnpackSettings& settings)
+    HuffmanDecoder* getDecoder(
+        std::streambuf& is, const UnpackSettings& settings)
     {
       return createDecoder(is, 0);
     }
 
-    HuffmanDecoder* getDecoder2(InputStream& is, const UnpackSettings& settings)
+    HuffmanDecoder* getDecoder2(
+        std::streambuf& is, const UnpackSettings& settings)
     {
       return createDecoder(is, 1);
     }
@@ -265,7 +267,7 @@ namespace unpack {
 }
 
 Image* ImageReader::readImage(
-    InputStream& istream, const UnpackSettings& settings)
+    std::streambuf& istream, const UnpackSettings& settings)
 {
   std::auto_ptr<Image> ret(new Image(settings.width, settings.height));
 

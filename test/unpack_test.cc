@@ -2,9 +2,9 @@
 
 #include "refinery/unpack.h"
 
+#include <fstream>
 #include <memory>
 
-#include "refinery/input.h"
 #include "refinery/image.h"
 
 namespace {
@@ -13,9 +13,10 @@ class ImageReaderTest : public ::testing::Test {
 };
 
 TEST(ImageReaderTest, NikonD5000) {
-  refinery::FileInputStream fis("./test/files/nikon-d5000-1.nef");
+  std::filebuf fb;
+  fb.open("./test/files/nikon-d5000-1.nef", std::ios::in | std::ios::binary);
   const int offset = 1083530; // Exif.SubImage2.StripOffsets
-  fis.seek(offset, std::ios::beg);
+  fb.pubseekoff(offset, std::ios::beg);
 
   refinery::UnpackSettings settings;
   settings.bps = 12; // Exif.SubImage2.BitsPerSample12
@@ -77,12 +78,12 @@ TEST(ImageReaderTest, NikonD5000) {
 
   refinery::ImageReader reader;
 
-  fis.seek(offset, std::ios::beg);
+  fb.pubseekoff(offset, std::ios::beg);
 
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fis, settings));
+  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
   refinery::Image& image(*imagePtr);
 
-  EXPECT_EQ(offset + settings.length, fis.tell()) << "whole image was read";
+  EXPECT_EQ(offset + settings.length, fb.pubseekoff(0, std::ios::cur)) << "whole image was read";
 
   EXPECT_EQ(3, image.bytesPerPixel());
   EXPECT_EQ(settings.height, image.height());
@@ -123,16 +124,19 @@ TEST(ImageReaderTest, NikonD5000) {
 };
 
 TEST(ImageReaderTest, Ppm16Bit) {
-  refinery::FileInputStream fis("./test/files/nikon_d5000_225x75_sample_ahd16.ppm");
+  std::filebuf fb;
+  fb.open(
+      "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
+      std::ios::in | std::ios::binary);
   refinery::UnpackSettings settings; // almost ignored. FIXME improve API
   settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
 
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fis, settings));
+  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
   refinery::Image& image(*imagePtr);
 
-  EXPECT_EQ(101266, fis.tell());
+  EXPECT_EQ(101266, fb.pubseekoff(0, std::ios::cur));
   EXPECT_EQ(225, image.width());
   EXPECT_EQ(75, image.height());
   EXPECT_EQ(6, image.bytesPerPixel());

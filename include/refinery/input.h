@@ -1,10 +1,7 @@
 #ifndef _REFINERY_INPUT_H
 #define _REFINERY_INPUT_H
 
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <string>
+#include <streambuf>
 #include <vector>
 
 #include <climits> /* really we want cstdint, but it's not standard yet */
@@ -20,45 +17,6 @@ namespace refinery {
 # else
 #  error could not define uint_fast32_t
 # endif
-
-class InputStream {
-public:
-  virtual ~InputStream();
-
-  std::streamsize read(char* buffer, std::streamsize n);
-  std::streampos seek(std::streamoff offset, std::ios::seekdir dir);
-  std::streampos tell();
-
-protected:
-  virtual std::streamsize doRead(char* buffer, std::streamsize n) = 0;
-  virtual std::streampos doSeek(std::streamoff offset, std::ios::seekdir dir) = 0;
-};
-
-class BufferInputStream : public InputStream {
-  const char* mBuffer;
-  std::streampos mPos; /* number of chars already read */
-  std::streamsize mSize; /* total number of chars */
-
-public:
-  BufferInputStream(const char* buffer, std::streamsize size)
-      : mBuffer(buffer), mSize(size) {}
-
-protected:
-  virtual std::streamsize doRead(char* buffer, std::streamsize n);
-  virtual std::streampos doSeek(std::streamoff offset, std::ios::seekdir dir);
-};
-
-class FileInputStream : public InputStream {
-  std::string mFilename;
-  std::auto_ptr<std::streambuf> mStreambuf;
-
-public:
-  FileInputStream(const std::string& filename);
-
-protected:
-  virtual std::streamsize doRead(char* buffer, std::streamsize n);
-  virtual std::streampos doSeek(std::streamoff offset, std::ios::seekdir dir);
-};
 
 /**
  * Huffman decoder which reads from an input stream.
@@ -86,11 +44,12 @@ class HuffmanDecoder {
   } EntryType;
   typedef std::vector<EntryType> TableType;
 
-  InputStream& mInputStream;
+  std::streambuf& mInputStream;
   int mMaxBits;
   TableType mTable;
   uint_fast32_t mBuffer; // some bits, in the least-significant part of the int
   unsigned int mBufferLength; // number of bits
+  int mEofs; // count how many EOFs we hit so we don't rewind them in the dtor
 
   void init(const unsigned char initializer[])
   {
@@ -99,7 +58,7 @@ class HuffmanDecoder {
 
     for (mMaxBits = 16; !counts[mMaxBits-1]; mMaxBits--) {}
 
-    mTable.reserve(1 << mMaxBits);
+    mTable.reserve((1 << mMaxBits) - 1);
 
     for (int h = 0, len = 0; len < mMaxBits; len++) {
       for (int i = 0; i < counts[len]; i++, leaf++) {
@@ -123,14 +82,14 @@ class HuffmanDecoder {
     };
 
     if (mBufferLength < nBits) {
-      char c[2];
-      if (!mInputStream.read(c, 2)) return 0; // FIXME handle errors
-      mBuffer =
-          mBuffer << 16
-          | (static_cast<unsigned short>(static_cast<unsigned char>(c[0])) << 8)
-          | static_cast<unsigned char>(c[1]);
+      int msbInt = mInputStream.sbumpc();
+      int lsbInt = mInputStream.sbumpc();
+      uint16_t msb = static_cast<unsigned char>(msbInt);
+      unsigned char lsb = static_cast<unsigned char>(lsbInt);
+      mBuffer = mBuffer << 16 | (msb << 8) | lsb;
       mBufferLength += 16;
-      // FIXME if we only read 1 byte, the dtor will rewind us 2
+      if (msbInt == std::char_traits<char>::eof()) mEofs++;
+      if (lsbInt == std::char_traits<char>::eof()) mEofs++;
     }
 
     return (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
@@ -165,8 +124,8 @@ public:
    * 1111110         0x0b
    * 1111111         0xff
    */
-  HuffmanDecoder(InputStream& inputStream, const unsigned char initializer[])
-      : mInputStream(inputStream), mBuffer(0), mBufferLength(0)
+  HuffmanDecoder(std::streambuf& inputStream, const unsigned char initializer[])
+      : mInputStream(inputStream), mBuffer(0), mBufferLength(0), mEofs(0)
   {
     this->init(initializer);
   }
@@ -177,7 +136,9 @@ public:
    */
   ~HuffmanDecoder()
   {
-    mInputStream.seek(-mBufferLength / 8, std::ios::cur);
+    for (unsigned int i = mEofs; i < mBufferLength / 8; i++) {
+      mInputStream.sungetc();
+    }
   }
 
   uint16_t nextHuffmanValue()

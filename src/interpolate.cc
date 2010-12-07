@@ -355,9 +355,13 @@ private:
         }
 
         if (hm[H] > hm[V]) {
-          std::copy(&hPix[0][0], &hPix[0][3], &pix[0][0]);
+          for (Color c = R; c <= B; c++) {
+            pix[0][c] = hPix[0][c];
+          }
         } else if (hm[V] > hm[H]) {
-          std::copy(&vPix[0][0], &vPix[0][3], &pix[0][0]);
+          for (Color c = R; c <= B; c++) {
+            pix[0][c] = vPix[0][c];
+          }
         } else {
           for (Color c = R; c <= B; c++) {
             pix[0][c] = (hPix[0][c] + vPix[0][c]) >> 1;

@@ -2,11 +2,11 @@
 #define _REFINERY_UNPACK_H
 
 #include <cstddef>
+#include <iosfwd>
 #include <vector>
 
 namespace refinery {
 
-class InputStream;
 template<typename T, std::size_t N> class TypedImage;
 typedef TypedImage<unsigned short, 3> Image;
 
@@ -35,12 +35,12 @@ public:
    * The stream must be positioned at the first character of the image. In the
    * case of a TIFF-like file (NEF, etc), that will take sleuthing. Suggesion:
    * use libexiv2 to find Exif.(Image|SubImage1|SubImage2).StripOffsets, and
-   * pass that to InputStream.seek().
+   * pass that to std::streambuf::pubseekoff().
    *
    * When reading is done, the stream will be seeked one byte past the last
    * byte in the image.
    */
-  Image* readImage(InputStream& istream, const UnpackSettings& settings);
+  Image* readImage(std::streambuf& istream, const UnpackSettings& settings);
 };
 
 }

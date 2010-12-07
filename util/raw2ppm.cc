@@ -1,9 +1,9 @@
 #include "refinery/image.h"
-#include "refinery/input.h"
 #include "refinery/interpolate.h"
 #include "refinery/output.h"
 #include "refinery/unpack.h"
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 
@@ -16,10 +16,11 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  FileInputStream fis(argv[1]);
+  std::filebuf fb;
+  fb.open(argv[1], std::ios::in | std::ios::binary);
 
   const int offset = 1083530; // Exif.SubImage2.StripOffsets
-  fis.seek(offset, std::ios::beg);
+  fb.pubseekoff(offset, std::ios::beg);
 
   refinery::UnpackSettings settings;
   settings.bps = 12; // Exif.SubImage2.BitsPerSample12
@@ -80,9 +81,9 @@ int main(int argc, char **argv)
   settings.split = 0;
 
   ImageReader reader;
-  fis.seek(offset, std::ios::beg);
+  fb.pubseekoff(offset, std::ios::beg);
 
-  std::auto_ptr<Image> imagePtr(reader.readImage(fis, settings));
+  std::auto_ptr<Image> imagePtr(reader.readImage(fb, settings));
   Image& image(*imagePtr);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);

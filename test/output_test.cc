@@ -2,12 +2,12 @@
 
 #include "refinery/output.h"
 
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string>
 
 #include "refinery/image.h"
-#include "refinery/input.h"
 #include "refinery/unpack.h"
 
 namespace {
@@ -17,12 +17,15 @@ class ImageWriterTest : public ::testing::Test {
 
 TEST(ImageWriterTest, WritePpm16Bit) {
   // Assume PPM input works and load up an Image
-  refinery::FileInputStream fis("./test/files/nikon_d5000_225x75_sample_ahd16.ppm");
+  std::filebuf fb;
+  fb.open(
+      "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
+      std::ios::in | std::ios::binary);
   refinery::UnpackSettings settings; // almost ignored. FIXME improve API
   settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fis, settings));
+  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
@@ -43,12 +46,15 @@ TEST(ImageWriterTest, WritePpm16Bit) {
 
 TEST(ImageWriterTest, WritePpm8Bit) {
   // Assume PPM input works and load up an Image
-  refinery::FileInputStream fis("./test/files/nikon_d5000_225x75_sample_ahd16.ppm");
+  std::filebuf fb;
+  fb.open(
+      "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
+      std::ios::in | std::ios::binary);
   refinery::UnpackSettings settings; // almost ignored. FIXME improve API
   settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fis, settings));
+  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
