@@ -11,9 +11,11 @@ typedef TypedImage<unsigned short, 3> Image;
 class ImageWriter {
 public:
   void writeImage(
-      const Image& image, std::ostream& ostream, const char* type = 0);
+      const Image& image, std::ostream& ostream, const char* type = 0,
+      unsigned int colorDepth = 8);
   void writeImage(
-      const Image& image, const char* filename, const char* type = 0);
+      const Image& image, const char* filename, const char* type = 0,
+      unsigned int colorDepth = 8);
 };
 
 } // namespace refinery
