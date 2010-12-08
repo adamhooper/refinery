@@ -190,12 +190,14 @@ private:
       const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
       const float (&xyz_cam)[3][3])
   {
-    float xyz[3] = { 0.5, 0.5, 0.5 };
-    for (Color rgbC = R; rgbC <= B; rgbC++) {
-      xyz[X] += xyz_cam[X][rgbC] * rgb[rgbC];
-      xyz[Y] += xyz_cam[Y][rgbC] * rgb[rgbC];
-      xyz[Z] += xyz_cam[Z][rgbC] * rgb[rgbC];
-    }
+    float xyz[3] = {
+      xyz_cam[X][R] * rgb[R] + xyz_cam[X][G] * rgb[G] + xyz_cam[X][B] * rgb[B]
+        + 0.5,
+      xyz_cam[Y][R] * rgb[R] + xyz_cam[Y][G] * rgb[G] + xyz_cam[Y][B] * rgb[B]
+        + 0.5,
+      xyz_cam[Z][R] * rgb[R] + xyz_cam[Z][G] * rgb[G] + xyz_cam[Z][B] * rgb[B]
+        + 0.5
+    };
 
     for (Color xyzC = X; xyzC <= Z; xyzC++) {
       xyz[xyzC] = xyzCbrt(xyz[xyzC]);
@@ -285,33 +287,48 @@ private:
 
     for (int row = top; row < bottom; row++) {
       HomogeneityMap::RowType homoPix(&homoMap.pixelsRow(row)[left]);
-      LABImage::ConstRowType hLabPix(&hLabImage.constPixelsRow(row)[left]);
-      LABImage::ConstRowType vLabPix(&vLabImage.constPixelsRow(row)[left]);
 
-      for (int col = left; col < right;
-          col++, homoPix++, hLabPix++, vLabPix++) {
+      LABImage::ConstRowType labPix[2];
+      labPix[H] = &hLabImage.constPixelsRow(row)[left];
+      labPix[V] = &vLabImage.constPixelsRow(row)[left];
+
+      LABImage::ConstRowType labAdjPix[2][4];
+      for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
+        labAdjPix[H][adjDir] = &labPix[H][adj[adjDir]];
+        labAdjPix[V][adjDir] = &labPix[V][adj[adjDir]];
+      }
+
+      for (int col = left; col < right; col++, homoPix++) {
 
         for (unsigned int dir = H; dir <= V; dir++) {
-          LABImage::ConstRowType dirLabPix(dir == H ? hLabPix : vLabPix);
+          LABImage::ConstRowType dirLabPix(labPix[dir]);
+          LABImage::ConstRowType (&dirLabAdjPix)[4](labAdjPix[dir]);
 
-          for (int adjIndex = 0; adjIndex < 4; adjIndex++) {
-            LABImage::ConstRowType adjLabPix(&dirLabPix[adj[adjIndex]]);
+          for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
+            LABImage::ConstRowType adjLabPix(dirLabAdjPix[adjDir]);
 
-            lDiff[dir][adjIndex] = std::abs(dirLabPix[0][L] - adjLabPix[0][L]);
+            int labDiff[3];
+            labDiff[L] = dirLabPix[0][L] - adjLabPix[0][L];
+            labDiff[A] = dirLabPix[0][A] - adjLabPix[0][A];
+            labDiff[B] = dirLabPix[0][B] - adjLabPix[0][B];
 
-            int aDiff = dirLabPix[0][A] - adjLabPix[0][A];
-            int bDiff = dirLabPix[0][B] - adjLabPix[0][B];
-            abDiff[dir][adjIndex] = aDiff * aDiff + bDiff * bDiff;
+            lDiff[dir][adjDir] = std::abs(labDiff[L]);
+            abDiff[dir][adjDir] =
+                labDiff[A] * labDiff[A] + labDiff[B] * labDiff[B];
+
+            adjLabPix++;
           }
+
+          dirLabPix++;
         }
 
         unsigned int lEps = epsilon(lDiff);
         unsigned int abEps = epsilon(abDiff);
 
         for (unsigned int dir = H; dir <= V; dir++) {
-          HomogeneityMap::ValueType homogeneity(0);
-          for (int adjIndex = 0; adjIndex < 4; adjIndex++) {
-            if (lDiff[dir][adjIndex] <= lEps && abDiff[dir][adjIndex] <= abEps)
+          unsigned int homogeneity = 0;
+          for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
+            if (lDiff[dir][adjDir] <= lEps && abDiff[dir][adjDir] <= abEps)
             {
               homogeneity++;
             }
