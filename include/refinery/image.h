@@ -67,7 +67,7 @@ public:
   Color colorAtPoint(const Point& point) const {
     int row = point.row;
     int col = point.col;
-    return (mFilters >> (((row << 1 & 14) | (col & 1)) << 1)) & 3;
+    return (mFilters >> ((row << 2) | ((col & 1) << 1)) & 30) & 3;
   }
 
   const PixelsType& constPixels() const { return mPixels; }
