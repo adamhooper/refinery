@@ -191,12 +191,18 @@ private:
       const float (&xyz_cam)[3][3])
   {
     float xyz[3] = {
-      xyz_cam[X][R] * rgb[R] + xyz_cam[X][G] * rgb[G] + xyz_cam[X][B] * rgb[B]
-        + 0.5,
-      xyz_cam[Y][R] * rgb[R] + xyz_cam[Y][G] * rgb[G] + xyz_cam[Y][B] * rgb[B]
-        + 0.5,
-      xyz_cam[Z][R] * rgb[R] + xyz_cam[Z][G] * rgb[G] + xyz_cam[Z][B] * rgb[B]
-        + 0.5
+      0.5
+        + xyz_cam[X][R] * rgb[R]
+        + xyz_cam[X][G] * rgb[G]
+        + xyz_cam[X][B] * rgb[B],
+      0.5
+        + xyz_cam[Y][R] * rgb[R]
+        + xyz_cam[Y][G] * rgb[G]
+        + xyz_cam[Y][B] * rgb[B],
+      0.5
+        + xyz_cam[Z][R] * rgb[R]
+        + xyz_cam[Z][G] * rgb[G]
+        + xyz_cam[Z][B] * rgb[B]
     };
 
     for (Color xyzC = X; xyzC <= Z; xyzC++) {
@@ -329,9 +335,10 @@ private:
     for (int row = top; row < bottom; row++) {
       HomogeneityMap::RowType homoPix(&homoMap.pixelsRow(row)[left]);
 
-      LABImage::ConstRowType labPix[2];
-      labPix[H] = &hLabImage.constPixelsRow(row)[left];
-      labPix[V] = &vLabImage.constPixelsRow(row)[left];
+      LABImage::ConstRowType labPix[2] = {
+        &hLabImage.constPixelsRow(row)[left],
+        &vLabImage.constPixelsRow(row)[left]
+      };
 
       LABImage::ConstRowType labAdjPix[2][4];
       for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
@@ -343,10 +350,9 @@ private:
 
         for (unsigned int dir = H; dir <= V; dir++) {
           LABImage::ConstRowType dirLabPix(labPix[dir]);
-          LABImage::ConstRowType (&dirLabAdjPix)[4](labAdjPix[dir]);
 
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
-            LABImage::ConstRowType adjLabPix(dirLabAdjPix[adjDir]);
+            LABImage::ConstRowType adjLabPix(labAdjPix[dir][adjDir]);
 
             int labDiff[3];
             labDiff[L] = dirLabPix[0][L] - adjLabPix[0][L];
@@ -357,10 +363,10 @@ private:
             abDiff[dir][adjDir] =
                 labDiff[A] * labDiff[A] + labDiff[B] * labDiff[B];
 
-            adjLabPix++;
+            labAdjPix[dir][adjDir]++;
           }
 
-          dirLabPix++;
+          labPix[dir]++;
         }
 
         unsigned int lEps = epsilon(lDiff);
