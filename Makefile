@@ -31,4 +31,4 @@ obj/unpack.o: src/unpack.cc include/refinery/unpack.h include/refinery/input.h i
 	${CXX} -c ${CXXFLAGS} $< -o $@
 
 clean:
-	rm -f obj/*.o obj/*.so test/gtest_main
+	rm -f obj/*.o obj/*.so test/gtest_main bin/*
