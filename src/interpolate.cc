@@ -211,6 +211,45 @@ private:
         64.0f * 200.0f * (xyz[Y] - xyz[Z]));
   }
 
+  void fillRandBinGPixel(
+      Image::RowType& dPix, const Color& rowC, const Color& colC,
+      Image::ConstRowType& pix,
+      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
+      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+  {
+    dPix[0][G] = pix[0][G];
+
+    Image::ValueType colCValue = clip(
+        pix[0][G] +
+        ((pixAbove[0][colC] + pixBelow[0][colC]
+          - dPixAbove[0][G] - dPixBelow[0][G]) >> 1));
+    dPix[0][colC] = colCValue;
+
+    Image::ValueType rowCValue = clip(
+        pix[0][G] +
+        ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
+          >> 1));
+    dPix[0][rowC] = rowCValue;
+  }
+
+  void fillRandBinBorRPixel(
+      Image::RowType& dPix, const Color& pixelC, const Color& otherC,
+      Image::ConstRowType& pix,
+      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
+      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+  {
+    dPix[0][pixelC] = pix[0][pixelC];
+
+    Image::ValueType otherCValue = clip(
+        dPix[0][G] +
+        ((pixAbove[-1][otherC] + pixAbove[1][otherC]
+          + pixBelow[-1][otherC] + pixBelow[1][otherC]
+          - dPixAbove[-1][G] - dPixAbove[1][G]
+          - dPixBelow[-1][G] - dPixBelow[1][G]
+          + 1) >> 2));
+    dPix[0][otherC] = otherCValue;
+  }
+
   void fillRandBinDirectionalImageAndCreateCielab(
       const Image& image, Image& dirImage, LABImage& labImage,
       const float (&xyz_cam)[3][3])
@@ -225,41 +264,43 @@ private:
       Image::RowType dPix(&dirImage.pixelsRow(row)[left]);
       LABImage::RowType lPix(&labImage.pixelsRow(row)[left]);
 
+      /*
+       * We assume the bayer pattern in the filter looks like one of these
+       * (copied from dcraw comments):
+       *
+       *    0 1 2 3 4 5   0 1 2 3 4 5   0 1 2 3 4 5   0 1 2 3 4 5
+       *    0 B G B G B G 0 G R G R G R 0 G B G B G B 0 R G R G R G
+       *    1 G R G R G R 1 B G B G B G 1 R G R G R G 1 G B G B G B
+       *    2 B G B G B G 2 G R G R G R 2 G B G B G B 2 R G R G R G
+       *    3 G R G R G R 3 B G B G B G 3 R G R G R G 3 G B G B G B
+       *
+       * So we know:
+       * - every 2nd row starts with the same color; the other is green
+       * - horizontally, we only see two colors on a row (one is green)
+       * - vertically, we only see two colors on a column (one is green)
+       * - if we're looking at a green pixel and we know the row's other
+       *   color c, the column's color is 2-c
+       */
+
+
       for (int col = left; col < right; col++, lPix++, pix++, dPix++) {
         Image::ConstRowType pixAbove(&pix[-width]);
         Image::ConstRowType pixBelow(&pix[width]);
         Image::ConstRowType dPixAbove(&dPix[-width]);
         Image::ConstRowType dPixBelow(&dPix[width]);
 
-        Color c(2 - image.colorAtPoint(Point(row, col)));
+        Color c(image.colorAtPoint(Point(row, col)));
 
         if (c == G) {
-          c = image.colorAtPoint(Point(row + 1, col));
-          Image::ValueType cValue = clip(
-              pix[0][G] +
-              ((pixAbove[0][c] + pixBelow[0][c]
-                - dPixAbove[0][G] - dPixBelow[0][G]) >> 1));
-          dPix[0][c] = cValue;
-
-          Color otherC(2 - c);
-          Image::ValueType otherCValue = clip(
-              pix[0][G] +
-              ((pix[-1][otherC] + pix[1][otherC] - dPix[-1][G] - dPix[1][G])
-                >> 1));
-          dPix[0][otherC] = otherCValue;
+          Color colC(image.colorAtPoint(Point(row + 1, col)));
+          fillRandBinGPixel(
+              dPix, 2 - colC, colC,
+              pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         } else {
-          Image::ValueType cValue = clip(
-              dPix[0][G] +
-              ((pixAbove[-1][c] + pixAbove[1][c]
-                + pixBelow[-1][c] + pixBelow[1][c]
-                - dPixAbove[-1][G] - dPixAbove[1][G]
-                - dPixBelow[-1][G] - dPixBelow[1][G]
-                + 1) >> 2));
-          dPix[0][c] = cValue;
+          Color otherC(2 - c);
+          fillRandBinBorRPixel(
+              dPix, c, otherC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         }
-
-        c = image.colorAtPoint(Point(row, col));
-        dPix[0][c] = pix[0][c];
 
         rgbToLab(dPix[0], lPix[0], xyz_cam);
       }
@@ -270,7 +311,7 @@ private:
   {
     return std::min(
         std::max(diff[H][0], diff[H][1]),
-        std::max(diff[V][2], diff[V][3]));
+        std::max(diff[V][2], diff[V][3])) + 1;
   }
 
   void fillHomogeneityMap(
@@ -328,10 +369,21 @@ private:
         for (unsigned int dir = H; dir <= V; dir++) {
           unsigned int homogeneity = 0;
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
-            if (lDiff[dir][adjDir] <= lEps && abDiff[dir][adjDir] <= abEps)
+#if 0
+            /* This is the slow way--it uses branches */
+            if (lDiff[dir][adjDir] < lEps && abDiff[dir][adjDir] < abEps)
             {
               homogeneity++;
             }
+#else
+            /*
+             * Here's a branch-free equivalent. It assumes negative numbers
+             * start with a 1 bit (which the C standard mandates)
+             */
+            homogeneity += (
+                ((lDiff[dir][adjDir] - lEps) & (abDiff[dir][adjDir] - abEps))
+                >> (sizeof(unsigned int) * 8 - 1));
+#endif
           }
 
           homoPix[0][dir] = homogeneity;
