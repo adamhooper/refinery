@@ -170,6 +170,10 @@ namespace unpack {
 
       for (int row = 0; row < settings.height; row++) {
         Image::RowType rowPixels(image.pixelsRow(row));
+        Image::Color rowColors[2] = {
+          image.colorAtPoint(Point(row, 0)),
+          image.colorAtPoint(Point(row, 1))
+        };
 
         if (settings.split && row == settings.split) {
           decoder.reset(getDecoder2(is, settings));
@@ -178,6 +182,7 @@ namespace unpack {
         }
 
         for (int col = 0; col < settings.width; col++) {
+          unsigned int colIsOdd = col & 1;
           int i = decoder->nextHuffmanValue();
           int len = i & 0xf;
           int shl = i >> 4;
@@ -192,17 +197,14 @@ namespace unpack {
           if (col < 2) {
             hpred[col] = vpred[row & 1][col] += diff;
           } else {
-            hpred[col & 1] += diff;
+            hpred[colIsOdd] += diff;
           }
-          if (hpred[col & 1] + min >= max) throw "Error";
+          if (hpred[colIsOdd] + min >= max) throw "Error";
           if (col - left_margin < settings.width) {
-            int color = (settings.filters >> (((row << 1 & 14) + (col & 1)) << 1)) & 3;
-            if (color == 3) color = 1; // FIXME: adjust filter instead
-
             unsigned short val = std::min(
-                hpred[col & 1], static_cast<unsigned short>(curve.size()));
+                hpred[colIsOdd], static_cast<unsigned short>(curve.size()));
 
-            rowPixels[col][color] = curve[val];
+            rowPixels[col][rowColors[colIsOdd]] = curve[val];
           }
         }
       }
