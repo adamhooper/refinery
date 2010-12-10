@@ -88,8 +88,12 @@ class HuffmanDecoder {
       unsigned char lsb = static_cast<unsigned char>(lsbInt);
       mBuffer = mBuffer << 16 | (msb << 8) | lsb;
       mBufferLength += 16;
-      if (msbInt == std::char_traits<char>::eof()) mEofs++;
-      if (lsbInt == std::char_traits<char>::eof()) mEofs++;
+      if (lsbInt == std::char_traits<char>::eof()) {
+        mEofs++;
+        if (msbInt == std::char_traits<char>::eof()) {
+          mEofs++;
+        }
+      }
     }
 
     return (mBuffer >> (mBufferLength - nBits)) & TRUNCATE_LEFT[nBits];
@@ -153,9 +157,7 @@ public:
 
   uint16_t nextBitsValue(unsigned int nBits)
   {
-    if (nBits <= 0) return 0;
-
-    uint16_t value = getBits(nBits);
+    uint16_t value = getBits(nBits); // works with nBits = 0, no branch
 
     mBufferLength -= nBits;
 
