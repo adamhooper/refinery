@@ -54,15 +54,22 @@ public:
     if (xyzCbrtLookup.size() == 0) {
       // This is thread-safe: worst-case we just set the same value multiple
       // times.
-      xyzCbrtLookup.reserve(0x10000);
+      xyzCbrtLookup.reserve(0x20000);
 
       for (int i = 0; i < 0x10000; i++) {
         double r = i / 65535.0;
-        xyzCbrtLookup[i] = (r > 0.008856 ? std::pow(r, 1.0/3) : 7.787*r + 16.0/116);
+        xyzCbrtLookup[i] = 64.0f * (r > 0.008856 ? std::pow(r, 1.0/3) : 7.787*r + 16.0/116);
       }
 
       xyzCbrtMin = xyzCbrtLookup[0];
       xyzCbrtMax = xyzCbrtLookup[0xffff];
+
+      for (int i = 0x10000; i <= 0x17fff; i++) {
+        xyzCbrtLookup[i] = xyzCbrtMax;
+      }
+      for (int i = 0x18000; i <= 0x1ffff; i++) {
+        xyzCbrtLookup[i] = xyzCbrtMin;
+      }
     }
   }
 
@@ -105,17 +112,21 @@ private:
   }
 
   /**
-   * Returns cbrt(f), unless f is <= 580 in which case it's a linear thing.
+   * Returns cbrt(f/65536), unless f is <= 580 in which case it's a linear
+   * formula.
    *
    * Google how to convert RGB to XYZ to LAB. This formula pops up.
+   *
+   * The return value is multiplied by 64.0f, because we convert to an integer.
+   *
+   * If f is a small negative number or a bit over 65535, it will be clamped.
+   * This will only work between around -32767 and 98302.
    */
-  float xyzCbrt(float f) const
+  float xyz64Cbrt(float f) const
   {
-    if (f <= 0.0f) return xyzCbrtMin;
-    unsigned int u = static_cast<unsigned int>(f);
-    if (u >= 0xffff) return xyzCbrtMax;
+    unsigned int i(static_cast<unsigned int>(static_cast<int>(f)) & 0x1ffff);
 
-    return xyzCbrtLookup[u];
+    return xyzCbrtLookup[i];
   }
 
   /**
@@ -124,26 +135,13 @@ private:
    * bound1 is the min and bound2 is the max, or vice-versa.
    */
   Image::ValueType bound(
-      const Image::ValueType& v, const Image::ValueType& bound1,
-      const Image::ValueType& bound2)
+      const Image::ValueType& v,
+      const Image::ValueType& bound1, const Image::ValueType& bound2)
   {
-    if (bound1 <= bound2) {
-      if (v <= bound1) {
-        return bound1;
-      } else if (v >= bound2) {
-        return bound2;
-      } else {
-        return v;
-      }
-    } else {
-      if (v <= bound2) {
-        return bound2;
-      } else if (v <= bound1) {
-        return v;
-      } else {
-        return bound1;
-      }
-    }
+    return std::min(
+      std::max(bound1, std::min(v, bound2)),
+      std::max(bound2, std::min(v, bound1))
+      );
   }
 
   void createGreenDirectionalImages(
@@ -159,101 +157,107 @@ private:
       int col = left + (image.colorAtPoint(Point(row, left)) & 1); // 1st R or B
 
       Image::ConstRowType pix(&image.constPixelsRow(row)[col]);
+
+      Image::ConstRowType pixAbove(&pix[-width]);
+      Image::ConstRowType pix2Above(&pix[-2 * width]);
+      Image::ConstRowType pixBelow(&pix[width]);
+      Image::ConstRowType pix2Below(&pix[2 * width]);
+
       Image::RowType hPix(&hImage.pixelsRow(row)[col]);
       Image::RowType vPix(&vImage.pixelsRow(row)[col]);
 
       Color c(image.colorAtPoint(Point(row, col)));
 
-      for (; col < right; col += 2, pix += 2, hPix += 2, vPix += 2) {
+      for (; col < right;
+          col += 2, pix += 2, hPix += 2, vPix += 2,
+          pixAbove += 2, pix2Above += 2, pixBelow += 2, pix2Below += 2) {
         Image::ValueType hValue =
           ((pix[-1][G] + pix[0][c] + pix[1][G]) * 2
            - pix[-2][c] - pix[2][c]) >> 2;
         hPix[0][G] = bound(hValue, pix[-1][G], pix[1][G]);
 
         Image::ValueType vValue =
-          ((pix[-width][G] + pix[0][c] + pix[width][G]) * 2
-            - pix[-2*width][c] - pix[2*width][c]) >> 2;
-        vPix[0][G] = bound(vValue, pix[-width][G], pix[width][G]);
+          ((pixAbove[0][G] + pix[0][c] + pixBelow[0][G]) * 2
+            - pix2Above[0][c] - pix2Below[0][c]) >> 2;
+        vPix[0][G] = bound(vValue, pixAbove[0][G], pixBelow[0][G]);
       }
     }
   }
 
   Image::ValueType clip(int val) {
-    if (val < 0) return 0;
-    if (val > std::numeric_limits<Image::ValueType>::max()) {
-      return std::numeric_limits<Image::ValueType>::max();
-    }
-    return static_cast<Image::ValueType>(val);
+    return static_cast<Image::ValueType>(std::max(
+        static_cast<int>(0),
+        std::min(val,
+          static_cast<int>(std::numeric_limits<Image::ValueType>::max()))));
   }
 
   void rgbToLab(
       const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
       const float (&xyz_cam)[3][3])
   {
-    float xyz[3] = {
-      0.5
+    float x = xyz64Cbrt(0.5
         + xyz_cam[X][R] * rgb[R]
         + xyz_cam[X][G] * rgb[G]
-        + xyz_cam[X][B] * rgb[B],
-      0.5
+        + xyz_cam[X][B] * rgb[B]);
+    float y = xyz64Cbrt(0.5
         + xyz_cam[Y][R] * rgb[R]
         + xyz_cam[Y][G] * rgb[G]
-        + xyz_cam[Y][B] * rgb[B],
-      0.5
+        + xyz_cam[Y][B] * rgb[B]);
+    float z = xyz64Cbrt(0.5
         + xyz_cam[Z][R] * rgb[R]
         + xyz_cam[Z][G] * rgb[G]
-        + xyz_cam[Z][B] * rgb[B]
-    };
+        + xyz_cam[Z][B] * rgb[B]);
 
-    for (Color xyzC = X; xyzC <= Z; xyzC++) {
-      xyz[xyzC] = xyzCbrt(xyz[xyzC]);
-    }
-
-    lab[L] = static_cast<LABImage::ValueType>(
-        64.0f * (116.0f * xyz[Y] - 16.0f));
-    lab[A] = static_cast<LABImage::ValueType>(
-        64.0f * 500.0f * (xyz[X] - xyz[Y]));
-    lab[B] = static_cast<LABImage::ValueType>(
-        64.0f * 200.0f * (xyz[Y] - xyz[Z]));
+    lab[L] = static_cast<LABImage::ValueType>(116.0f * y - (64.0f*16.0f));
+    lab[A] = static_cast<LABImage::ValueType>(500.0f * (x - y));
+    lab[B] = static_cast<LABImage::ValueType>(200.0f * (y - z));
   }
 
-  void fillRandBinGPixel(
+  inline void incrPointers(
+      int n, Image::ConstRowType& pix,
+      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
+      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+  {
+    pix += n;
+    pixAbove += n;
+    pixBelow += n;
+    dPixAbove += n;
+    dPixBelow += n;
+  }
+
+  inline void fillRandBinGPixelAndIncrPointers(
       Image::RowType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
       Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
   {
-    dPix[0][G] = pix[0][G];
-
-    Image::ValueType colCValue = clip(
+    Image::ValueType colCValue =
         pix[0][G] +
         ((pixAbove[0][colC] + pixBelow[0][colC]
-          - dPixAbove[0][G] - dPixBelow[0][G]) >> 1));
-    dPix[0][colC] = colCValue;
+          - dPixAbove[0][G] - dPixBelow[0][G]) >> 1);
+    dPix[0][colC] = clip(colCValue);
 
-    Image::ValueType rowCValue = clip(
+    Image::ValueType rowCValue =
         pix[0][G] +
         ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
-          >> 1));
-    dPix[0][rowC] = rowCValue;
+          >> 1);
+    dPix[0][rowC] = clip(rowCValue);
   }
 
-  void fillRandBinBorRPixel(
-      Image::RowType& dPix, const Color& pixelC, const Color& otherC,
+  inline void fillRandBinBorRPixelAndIncrPointers(
+      Image::RowType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
       Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
   {
-    dPix[0][pixelC] = pix[0][pixelC];
-
-    Image::ValueType otherCValue = clip(
+    Image::ValueType colCValue =
         dPix[0][G] +
-        ((pixAbove[-1][otherC] + pixAbove[1][otherC]
-          + pixBelow[-1][otherC] + pixBelow[1][otherC]
+        ((pixAbove[-1][colC] + pixAbove[1][colC]
+          + pixBelow[-1][colC] + pixBelow[1][colC]
           - dPixAbove[-1][G] - dPixAbove[1][G]
           - dPixBelow[-1][G] - dPixBelow[1][G]
-          + 1) >> 2));
-    dPix[0][otherC] = otherCValue;
+          + 1) >> 2);
+    dPix[0][colC] = clip(colCValue);
   }
 
   void fillRandBinDirectionalImageAndCreateCielab(
@@ -266,8 +270,14 @@ private:
     const int top = 3, left = 3, right = width - 3, bottom = height - 3;
 
     for (int row = top; row < bottom; row++) {
-      Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
       Image::RowType dPix(&dirImage.pixelsRow(row)[left]);
+      Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
+
+      Image::ConstRowType pixAbove(&pix[-width]);
+      Image::ConstRowType pixBelow(&pix[width]);
+      Image::ConstRowType dPixAbove(&dPix[-width]);
+      Image::ConstRowType dPixBelow(&dPix[width]);
+
       LABImage::RowType lPix(&labImage.pixelsRow(row)[left]);
 
       /*
@@ -288,27 +298,36 @@ private:
        *   color c, the column's color is 2-c
        */
 
+      Color rowC;
+      Color colC;
 
-      for (int col = left; col < right; col++, lPix++, pix++, dPix++) {
-        Image::ConstRowType pixAbove(&pix[-width]);
-        Image::ConstRowType pixBelow(&pix[width]);
-        Image::ConstRowType dPixAbove(&dPix[-width]);
-        Image::ConstRowType dPixBelow(&dPix[width]);
+      Color c(image.colorAtPoint(Point(row, left)));
+      if (c == G) {
+        rowC = image.colorAtPoint(Point(row, left + 1));
+        colC = 2 - rowC;
+      } else {
+        rowC = c;
+        colC = 2 - c;
+      }
 
-        Color c(image.colorAtPoint(Point(row, col)));
-
+      for (int col = left; col < right; col++) {
         if (c == G) {
-          Color colC(image.colorAtPoint(Point(row + 1, col)));
-          fillRandBinGPixel(
-              dPix, 2 - colC, colC,
+          fillRandBinGPixelAndIncrPointers(
+              dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+        } else{
+          fillRandBinBorRPixelAndIncrPointers(
+              dPix, rowC, colC,
               pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
-        } else {
-          Color otherC(2 - c);
-          fillRandBinBorRPixel(
-              dPix, c, otherC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         }
 
+        dPix[0][c] = pix[0][c];
+
         rgbToLab(dPix[0], lPix[0], xyz_cam);
+
+        dPix++;
+        lPix++;
+        incrPointers(1, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+        c = c == G ? rowC : G;
       }
     }
   }
