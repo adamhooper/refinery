@@ -281,20 +281,21 @@ private:
       }
 
       for (int col = left; col < right; col++) {
+        dPix[0][c] = pix[0][c];
+
         if (c == G) {
           fillRandBinGPixel(
               dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+          c = rowC;
         } else{
           fillRandBinBorRPixel(
               dPix, rowC, colC,
               pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+          c = G;
         }
-
-        dPix[0][c] = pix[0][c];
 
         dPix++;
         incrPointers(1, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
-        c = c == G ? rowC : G;
       }
     }
   }
