@@ -40,7 +40,7 @@ int main(int argc, char **argv)
   const char* mimeType = exivImage->mimeType().c_str();
 
   std::auto_ptr<Image> imagePtr(
-      reader.readImage(fb, mimeType, width, height, exifData));
+      reader.readImage(fb, mimeType, width, height, &exifData));
   Image& image(*imagePtr);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);
