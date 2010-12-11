@@ -4,7 +4,7 @@ CXX=g++
 all: obj/librefinery.so bin/raw2ppm
 
 bin/raw2ppm: util/raw2ppm.cc obj/librefinery.so
-	${CXX} ${CXXFLAGS} $< -lpthread -Lobj -lrefinery -o $@
+	${CXX} ${CXXFLAGS} $< -lpthread -Lobj -lrefinery -lexiv2 -o $@
 
 test: test/gtest_main
 	LD_LIBRARY_PATH=obj test/gtest_main

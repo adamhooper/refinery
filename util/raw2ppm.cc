@@ -3,11 +3,26 @@
 #include "refinery/output.h"
 #include "refinery/unpack.h"
 
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <memory>
 
+#include <exiv2/exif.hpp>
+#include <exiv2/image.hpp>
+#include <exiv2/tags.hpp>
+
 using namespace refinery;
+
+long getLong(const Exiv2::ExifData& exifData, const char* key)
+{
+  Exiv2::ExifData::const_iterator it(exifData.findKey(Exiv2::ExifKey(key)));
+  if (it != exifData.end()) {
+    return (*it).toLong();
+  }
+
+  return 0; // arbitrary
+}
 
 int main(int argc, char **argv)
 {
@@ -16,72 +31,69 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  std::filebuf fb;
-  fb.open(argv[1], std::ios::in | std::ios::binary);
+  Exiv2::Image::AutoPtr exivImage(Exiv2::ImageFactory::open(argv[1]));
+  assert(exivImage.get() != 0);
 
-  const int offset = 1083530; // Exif.SubImage2.StripOffsets
-  fb.pubseekoff(offset, std::ios::beg);
+  exivImage->readMetadata();
+  Exiv2::ExifData& exifData(exivImage->exifData());
+  if (exifData.empty()) {
+    throw Exiv2::Error(1, std::string(argv[1]) + " is missing Exif data");
+  }
 
   refinery::UnpackSettings settings;
-  settings.bps = 12; // Exif.SubImage2.BitsPerSample12
-  settings.width = 4352; // Exif.SubImage2.ImageWidth
-  settings.height = 2868; // Exif.SubImage2.ImageLength
-  settings.length = 9938252; // Exif.SubImage2.StripByteCounts
+
+  settings.bps = getLong(exifData, "Exif.SubImage2.BitsPerSample");
+  settings.width = getLong(exifData, "Exif.SubImage2.ImageWidth");
+  settings.height = getLong(exifData, "Exif.SubImage2.ImageLength");
+  settings.length = getLong(exifData, "Exif.SubImage2.StripByteCounts");
+
   settings.format = refinery::UnpackSettings::FORMAT_NEF_COMPRESSED_LOSSY_2;
       // Exif.SubImage2.Compression, Exif.Nikon3.NEFCompression
-  // First stuff in linearization table:
-  // 0x4420, 0x0148, 0x0148, 0x0148, 0x0148, 0x0101
-  // (see http://lclevy.free.fr/nef/ to learn what it means)
-  settings.version0 = 0x44;
-  settings.version1 = 0x20;
-  settings.vpred[0][0] = 0x0148;
-  settings.vpred[0][1] = 0x0148;
-  settings.vpred[1][0] = 0x0148;
-  settings.vpred[1][1] = 0x0148;
+
   settings.filters = 0x4b4b4b4b;
-  const unsigned short linearization_table[] = {
-    // Exif.Nikon3.LinearizationTable
-    0x0000, 0x0010, 0x0020, 0x0030, 0x0040, 0x0050, 0x0060, 0x0070,
-    0x008f, 0x00af, 0x00cf, 0x00ef, 0x0111, 0x0141, 0x0171, 0x01a1,
-    0x01d1, 0x020c, 0x024c, 0x028c, 0x02cc, 0x0312, 0x0362, 0x03b2,
-    0x0402, 0x0455, 0x04b5, 0x0515, 0x0575, 0x05d6, 0x0646, 0x06b6,
-    0x0726, 0x0796, 0x0815, 0x0895, 0x0915, 0x0995, 0x0a24, 0x0ab4,
-    0x0b44, 0x0bd4, 0x0c72, 0x0d12, 0x0db2, 0x0e52, 0x0f00, 0x0fb0,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff
-  };
-  std::vector<unsigned short> linearization_vector(
-    &linearization_table[0], &linearization_table[257]);
-  settings.linearization_table = linearization_vector;
+
+  Exiv2::ExifData::const_iterator linIterator(
+      exifData.findKey(Exiv2::ExifKey("Exif.Nikon3.LinearizationTable")));
+  if (linIterator == exifData.end()) {
+    throw Exiv2::Error(
+        1, std::string(argv[1]) + " doesn't have a linearization table");
+  }
+  const Exiv2::Exifdatum& linDatum(*linIterator);
+  std::vector<Exiv2::byte> linBytes(linDatum.size(), 0);
+  linDatum.copy(&linBytes[0], Exiv2::bigEndian);
+
+  // (see http://lclevy.free.fr/nef/ to learn about the linearization curve)
+  settings.version0 = linBytes[0];
+  settings.version1 = linBytes[1];
+  settings.vpred[0][0] = linBytes[2] << 8 | linBytes[3];
+  settings.vpred[0][1] = linBytes[4] << 8 | linBytes[5];
+  settings.vpred[1][0] = linBytes[6] << 8 | linBytes[7];
+  settings.vpred[1][1] = linBytes[8] << 8 | linBytes[9];
+
+  unsigned int nLinCurveBytes =
+      linBytes[10] << 9 | linBytes[11] << 1; // bytes, not shorts
+  std::vector<unsigned short> linearizationVector;
+  linearizationVector.reserve(nLinCurveBytes >> 1);
+  for (unsigned int i = 12; i < nLinCurveBytes + 12; i += 2) {
+    linearizationVector.push_back(
+        static_cast<unsigned short>(linBytes[i]) << 8 | linBytes[i+1]);
+  }
+  settings.linearization_table = linearizationVector;
+
+  /*
+  settings.split =
+      (static_cast<unsigned short>(linBytes[12 + nLinCurveBytes]) << 8)
+      | linBytes[13 + nLinCurveBytes];
+      */
   settings.split = 0;
 
-  ImageReader reader;
+  const int offset = getLong(exifData, "Exif.SubImage2.StripOffsets");
+
+  std::filebuf fb;
+  fb.open(argv[1], std::ios::in | std::ios::binary);
   fb.pubseekoff(offset, std::ios::beg);
+
+  ImageReader reader;
 
   std::auto_ptr<Image> imagePtr(reader.readImage(fb, settings));
   Image& image(*imagePtr);
