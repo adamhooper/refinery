@@ -184,11 +184,9 @@ private:
     }
   }
 
-  Image::ValueType clip(int val) {
-    return static_cast<Image::ValueType>(std::max(
-        static_cast<int>(0),
-        std::min(val,
-          static_cast<int>(std::numeric_limits<Image::ValueType>::max()))));
+  Image::ValueType clamp16(int val) {
+    const unsigned int trashBits = val >> 16;
+    return trashBits ? (~trashBits >> 16) : val;
   }
 
   inline void incrPointers(
@@ -213,13 +211,13 @@ private:
         pix[0][G] +
         ((pixAbove[0][colC] + pixBelow[0][colC]
           - dPixAbove[0][G] - dPixBelow[0][G]) >> 1);
-    dPix[0][colC] = clip(colCValue);
+    dPix[0][colC] = clamp16(colCValue);
 
     Image::ValueType rowCValue =
         pix[0][G] +
         ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
           >> 1);
-    dPix[0][rowC] = clip(rowCValue);
+    dPix[0][rowC] = clamp16(rowCValue);
   }
 
   inline void fillRandBinBorRPixel(
@@ -235,7 +233,7 @@ private:
           - dPixAbove[-1][G] - dPixAbove[1][G]
           - dPixBelow[-1][G] - dPixBelow[1][G]
           + 1) >> 2);
-    dPix[0][colC] = clip(colCValue);
+    dPix[0][colC] = clamp16(colCValue);
   }
 
   void fillRandBinDirectionalImage(const Image& image, Image& dirImage)
@@ -397,8 +395,8 @@ private:
           labPix[dir]++;
         }
 
-        unsigned int lEps = epsilon(lDiff);
-        unsigned int abEps = epsilon(abDiff);
+        const unsigned int lEps = epsilon(lDiff);
+        const unsigned int abEps = epsilon(abDiff);
 
         for (unsigned int dir = H; dir <= V; dir++) {
           unsigned int homogeneity = 0;
@@ -416,7 +414,7 @@ private:
              */
             homogeneity += (
                 ((lDiff[dir][adjDir] - lEps) & (abDiff[dir][adjDir] - abEps))
-                >> (sizeof(unsigned int) * 8 - 1));
+                >> (sizeof(homogeneity) * 8 - 1));
 #endif
           }
 
