@@ -9,18 +9,22 @@
 #include <sstream>
 #include <string>
 
+#include <exiv2/exif.hpp>
+#include <exiv2/tags.hpp>
+
 namespace refinery {
 
 namespace unpack {
 
+  using Exiv2::ExifData;
+  using Exiv2::ExifKey;
+  using Exiv2::Exifdatum;
+
   class Unpacker {
   public:
-    virtual int bytesPerPixel() { return 3; } // Output, not input
-    virtual void unpack(
-        std::streambuf& is, const UnpackSettings& settings, Image& image) = 0;
-
-  protected:
-    /* Helper methods go here */
+    virtual Image* unpackImage(
+        std::streambuf& is, int width, int height,
+        const ExifData* exifData) = 0;
   };
 
   class PpmUnpacker : public Unpacker {
@@ -53,86 +57,220 @@ namespace unpack {
       image.setBytesPerPixel(maxValue == 65535 ? 6 : 3);
     }
 
-    void copyShorts(std::streambuf& is, unsigned int nValues, Image& image)
+    void copyShorts(
+        std::streambuf& is, unsigned int nValues, unsigned short* out)
     {
-      Image::PixelsType::iterator it(image.pixels().begin());
-
-      for (unsigned int i = 0; i < nValues; i++, it++) {
+      while (nValues--) {
         uint16_t msb = static_cast<unsigned char>(is.sbumpc());
         unsigned char lsb = static_cast<unsigned char>(is.sbumpc());
-        *it = (msb << 8) | lsb;
+        *out = (msb << 8) | lsb;
+        out++;
       }
     }
 
-    void copyChars(std::streambuf& is, unsigned int nValues, Image& image)
+    void copyChars(
+        std::streambuf& is, unsigned int nValues, unsigned short* out)
     {
-      Image::PixelsType::iterator it(image.pixels().begin());
-
-      for (unsigned int i = 0; i < nValues; i++, it++)
-      {
-        char c = is.sbumpc();
-        *it = static_cast<unsigned short>(static_cast<unsigned char>(c));
+      while (nValues--) {
+        unsigned char c = static_cast<unsigned char>(is.sbumpc());
+        *out = static_cast<unsigned short>(c);
+        out++;
       }
     }
 
   public:
-    virtual int bytesPerPixel() { return 3; }
-    virtual void unpack(
-        std::streambuf& is, const UnpackSettings& settings, Image& image)
+    virtual Image* unpackImage(
+        std::streambuf& is, int width, int height, const ExifData* exifData)
     {
-      unpackHeader(is, image);
+      std::auto_ptr<Image> image(new Image(width, height));
+
+      unpackHeader(is, *image);
 
       unsigned int nValues =
-          image.width() * image.height()
-          * image.bytesPerPixel() / sizeof(Image::ValueType);
+          image->width() * image->height()
+          * image->bytesPerPixel() / sizeof(Image::ValueType);
 
-      image.pixels().assign(nValues, 0);
+      image->pixels().assign(nValues, 0);
+      unsigned short* shorts(static_cast<unsigned short*>(&image->pixels()[0]));
 
-      if (image.bytesPerPixel() == 6) {
-        copyShorts(is, nValues, image);
+      if (image->bytesPerPixel() == 6) {
+        copyShorts(is, nValues, shorts);
       } else {
-        copyChars(is, nValues, image);
+        copyChars(is, nValues, shorts);
       }
+
+      return image.release();
     }
   };
 
   class NefCompressedUnpacker : public Unpacker {
   protected:
-    typedef std::vector<unsigned short> CurveType;
-
     /*
-     * Decodes and decompresses the linearization curve.
-     *
-     * In comes a 12-bit (or 14-bit) value; out goes the full 16 bits.
+     * The linearization curve, read from Exif data, is a lookup table. In goes
+     * a 12-bit (or 14-bit) value; out comes the full 16 bits.
      *
      * Many of the final entries will have the same value. "max" will be set to
      * point to the first of those max-value entries.
+     *
+     * See http://lclevy.free.fr/nef/ to see how this is deciphered.
      */
-    virtual void readCurve(
-        std::streambuf& is, const UnpackSettings& settings, CurveType& curve,
-        int& max) = 0;
+    class LinearizationCurve {
+    public:
+      std::vector<unsigned short> table;
+      unsigned char version0;
+      unsigned char version1;
+      unsigned short vpred[2][2];
+      unsigned short split;
+      int max;
+
+    private:
+      unsigned short bytesToShort(const unsigned char* bytes)
+      {
+        return static_cast<unsigned short>(bytes[0]) << 8 | bytes[1];
+      }
+
+      void fillTable(
+          const std::vector<unsigned short>& rawTable, int bitsPerSample)
+      {
+        int tableSize = 1 << bitsPerSample;
+        int stepSize = tableSize / (rawTable.size() - 1);
+        table.assign(tableSize, 0);
+
+        for (int i = 0, curStep = 0, stepPos = 0; i < tableSize; i++, stepPos++)
+        {
+          if (stepPos == stepSize) {
+            stepPos = 0;
+            curStep++;
+          }
+
+          table[i] =
+              (rawTable[curStep] * (stepSize-stepPos) +
+               rawTable[curStep+1] * stepPos)
+              / stepSize;
+        }
+
+        for (max = tableSize - 1; table[max-1] == table[max-2]; max--) {}
+      }
+
+      void init(const ExifData& exifData, int bitsPerSample)
+      {
+        ExifData::const_iterator iterator(
+            exifData.findKey(ExifKey("Exif.Nikon3.LinearizationTable")));
+        if (iterator == exifData.end()) {
+          throw std::string("Exif.Nikon3.LinearizationTable is missing");
+        }
+
+        const Exifdatum& datum(*iterator);
+        std::vector<unsigned char> bytes(datum.size(), 0);
+        datum.copy(&bytes[0], Exiv2::bigEndian);
+
+        version0 = bytes[0];
+        version1 = bytes[1];
+        vpred[0][0] = bytesToShort(&bytes[2]);
+        vpred[0][1] = bytesToShort(&bytes[4]);
+        vpred[1][0] = bytesToShort(&bytes[6]);
+        vpred[1][1] = bytesToShort(&bytes[8]);
+
+        unsigned int nShorts = bytesToShort(&bytes[10]);
+
+        std::vector<unsigned short> rawTable;
+        rawTable.reserve(nShorts);
+        for (unsigned int i = 12; i < 12 + nShorts * 2; i += 2) {
+          rawTable.push_back(bytesToShort(&bytes[i]));
+        }
+
+        if (version0 == 0x44 && version1 == 0x20) {
+          split = bytesToShort(&bytes[12 + nShorts * 2]);
+        } else {
+          split = 0;
+        }
+
+        this->fillTable(rawTable, bitsPerSample);
+      }
+
+    public:
+      LinearizationCurve(const ExifData& exifData, int bitsPerSample)
+      {
+        this->init(exifData, bitsPerSample);
+      }
+    };
+
+    unsigned int getBitsPerSample(const ExifData& exifData)
+    {
+      ExifData::const_iterator iterator(
+          exifData.findKey(ExifKey("Exif.SubImage2.BitsPerSample")));
+      if (iterator == exifData.end()) {
+        throw std::string("Exif.SubImage2.BitsPerSample is missing");
+      }
+      return (*iterator).toLong();
+    }
+
+    unsigned int getDataOffset(const ExifData& exifData)
+    {
+      ExifData::const_iterator iterator(
+          exifData.findKey(ExifKey("Exif.SubImage2.StripOffsets")));
+      if (iterator == exifData.end()) {
+        throw std::string("Exif.SubImage2.StripOffsets is missing");
+      }
+      return (*iterator).toLong();
+    }
+
+    unsigned int getFilters(const ExifData& exifData)
+    {
+      /*
+       * If Exif.SubImage2.CFAPattern == 1 2 0 1, that means we look like this:
+       *   GRGRGRGR...
+       *   BGBGBGBG...
+       *   GRGRGRGR...
+       *   BGBGBGBG...
+       *   ...
+       */
+      ExifData::const_iterator iterator(
+          exifData.findKey(ExifKey("Exif.SubImage2.CFAPattern")));
+      if (iterator == exifData.end()) {
+        throw std::string("Exif.SubImage2.CFAPattern is missing");
+      }
+      const Exifdatum& datum(*iterator);
+
+      std::vector<unsigned char> bytes(datum.size(), 0);
+      datum.copy(&bytes[0], Exiv2::bigEndian);
+
+      // XXX no idea if this is right--just that Nikon D5000 is 0x49494949
+      unsigned int filters =
+          ((bytes[0] << 6) & 0xc0)
+          | ((bytes[2] << 4) & 0x30)
+          | ((bytes[1] << 2) & 0xc)
+          | (bytes[3] & 0x3);
+
+      filters = filters << 24 | filters << 16 | filters << 8 | filters;
+
+      return filters;
+    }
+
     /*
      * Returns a Huffman decoder from the input stream.
      *
      * Seek with the input stream, then read with the decoder.
      */
     virtual HuffmanDecoder* getDecoder(
-        std::streambuf& is, const UnpackSettings& settings) = 0;
+        std::streambuf& is, const ExifData& exifData) = 0;
+
     /*
      * For files with a "split" (after the linearization table in Exif data),
      * this is what to use after the split.
      */
     virtual HuffmanDecoder* getDecoder2(
-        std::streambuf& is, const UnpackSettings& settings) {
-      return getDecoder(is, settings);
+        std::streambuf& is, const ExifData& exifData) {
+      return getDecoder(is, exifData);
     }
+
     /*
      * Nikons use six Huffman tables. getDecoder() and getDecoder2() can call
      * this method to create the right one.
      */
     HuffmanDecoder* createDecoder(std::streambuf& is, int key)
     {
-      static const unsigned char nikon_tree[][32] = { // dcraw.c
+      static const unsigned char NIKON_TREE[][32] = { // dcraw.c
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy */
           5,4,3,6,2,7,1,0,8,9,11,10,12 },
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy after split */
@@ -145,43 +283,63 @@ namespace unpack {
           8,0x5c,0x4b,0x3a,0x29,7,6,5,4,3,2,1,0,13,14 },
         { 0,1,4,2,2,3,1,2,0,0,0,0,0,0,0,0,  /* 14-bit lossless */
           7,6,8,5,9,4,10,3,11,12,2,0,1,13,14 } };
-      return new HuffmanDecoder(is, nikon_tree[key]);
+      return new HuffmanDecoder(is, NIKON_TREE[key]);
     }
 
   public:
-    void unpack(
-        std::streambuf& is, const UnpackSettings& settings, Image& image) {
-      CurveType curve;
+    virtual Image* unpackImage(
+        std::streambuf& is, int width, int height, const ExifData* exifDataPtr)
+    {
+      const ExifData& exifData(*exifDataPtr);
+
+      int bitsPerSample = getBitsPerSample(exifData);
+
+      LinearizationCurve curve(exifData, bitsPerSample);
+
+      const std::vector<unsigned short>& curveTable(curve.table);
+      const unsigned short curveSize(curveTable.size());
+      unsigned short max(curve.max);
+
       int left_margin = 0;
-      int max;
-      readCurve(is, settings, curve, max);
+
       unsigned short vpred[2][2];
       unsigned short hpred[2];
 
-      vpred[0][0] = settings.vpred[0][0];
-      vpred[0][1] = settings.vpred[0][1];
-      vpred[1][0] = settings.vpred[1][0];
-      vpred[1][1] = settings.vpred[1][1];
+      vpred[0][0] = curve.vpred[0][0];
+      vpred[0][1] = curve.vpred[0][1];
+      vpred[1][0] = curve.vpred[1][0];
+      vpred[1][1] = curve.vpred[1][1];
 
+      unsigned int filters = getFilters(exifData);
+
+      is.pubseekoff(getDataOffset(exifData), std::ios::beg);
+
+      std::auto_ptr<Image> imagePtr(new Image(width, height));
+      Image& image(*imagePtr);
+
+      image.setFilters(filters);
+      image.setBytesPerPixel(6);
+      image.pixels().assign(width * height * 3, 0);
+
+      std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, exifData));
       int min = 0;
-      std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, settings));
-
-      image.pixels().assign(settings.height * settings.width * 3, 0);
-
-      for (int row = 0; row < settings.height; row++) {
+      for (int row = 0; row < height; row++) {
         Image::RowType rowPixels(image.pixelsRow(row));
         Image::Color rowColors[2] = {
           image.colorAtPoint(Point(row, 0)),
           image.colorAtPoint(Point(row, 1))
         };
 
+#if 0
+        /* FIXME why isn't this working? */
         if (settings.split && row == settings.split) {
           decoder.reset(getDecoder2(is, settings));
           min = 16;
           max += 32;
         }
+#endif
 
-        for (int col = 0; col < settings.width; col++) {
+        for (int col = 0; col < width; col++) {
           unsigned int colIsOdd = col & 1;
           int i = decoder->nextHuffmanValue();
           int len = i & 0xf;
@@ -200,52 +358,28 @@ namespace unpack {
             hpred[colIsOdd] += diff;
           }
           if (hpred[colIsOdd] + min >= max) throw "Error";
-          if (col - left_margin < settings.width) {
-            unsigned short val = std::min(
-                hpred[colIsOdd], static_cast<unsigned short>(curve.size()));
+          if (col - left_margin < width) {
+            unsigned short val = std::min(hpred[colIsOdd], curveSize);
 
-            rowPixels[col][rowColors[colIsOdd]] = curve[val];
+            rowPixels[col][rowColors[colIsOdd]] = curveTable[val];
           }
         }
       }
+
+      return imagePtr.release();
     }
   };
 
   class NefCompressedLossy2Unpacker : public NefCompressedUnpacker {
   protected:
-    void readCurve(
-        std::streambuf& is, const UnpackSettings& settings,
-        CurveType& curve, int& max)
-    {
-      const std::vector<unsigned short>& lin(settings.linearization_table);
-
-      max = 1 << settings.bps;
-      int stepSize = max / (lin.size() - 1);
-      curve.assign(max, 0);
-
-      for (int i = 0, curStep = 0, stepPos = 0; i < max; i++, stepPos++) {
-        if (stepPos == stepSize) {
-          stepPos = 0;
-          curStep++;
-        }
-
-        curve[i] =
-            (lin[curStep] * (stepSize-stepPos) +
-             lin[curStep+1] * stepPos)
-            / stepSize;
-      }
-
-      while (curve[max-2] == curve[max-1]) max--;
-    }
-
-    HuffmanDecoder* getDecoder(
-        std::streambuf& is, const UnpackSettings& settings)
+    virtual HuffmanDecoder* getDecoder(
+        std::streambuf& is, const ExifData& exifData)
     {
       return createDecoder(is, 0);
     }
 
-    HuffmanDecoder* getDecoder2(
-        std::streambuf& is, const UnpackSettings& settings)
+    virtual HuffmanDecoder* getDecoder2(
+        std::streambuf& is, const ExifData& exifData)
     {
       return createDecoder(is, 1);
     }
@@ -253,13 +387,16 @@ namespace unpack {
 
   class UnpackerFactory {
   public:
-    static Unpacker* createUnpacker(const UnpackSettings& settings)
+    static Unpacker* createUnpacker(
+        const char* mimeType, const ExifData* exifData)
     {
-      switch (settings.format) {
-        case UnpackSettings::FORMAT_PPM:
-          return new PpmUnpacker();
-        case UnpackSettings::FORMAT_NEF_COMPRESSED_LOSSY_2:
-          return new NefCompressedLossy2Unpacker();
+      std::string sMimeType(mimeType);
+
+      if (sMimeType == "image/x-portable-pixmap") {
+        return new PpmUnpacker();
+      } else if (sMimeType == "image/tiff") {
+        // for now...
+        return new NefCompressedLossy2Unpacker();
       }
 
       return 0;
@@ -269,16 +406,17 @@ namespace unpack {
 }
 
 Image* ImageReader::readImage(
-    std::streambuf& istream, const UnpackSettings& settings)
+    std::streambuf& istream, const char* mimeType,
+    int width, int height, const Exiv2::ExifData* exifData)
 {
-  std::auto_ptr<Image> ret(new Image(settings.width, settings.height));
-
   std::auto_ptr<unpack::Unpacker> unpacker(
-      unpack::UnpackerFactory::createUnpacker(settings));
-  ret->setBytesPerPixel(unpacker->bytesPerPixel());
-  ret->setFilters(settings.filters & (~((settings.filters & 0x55555555) << 1)));
+      unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
 
-  unpacker->unpack(istream, settings, *ret);
+  std::auto_ptr<Image> ret(
+      unpacker->unpackImage(istream, width, height, exifData));
+
+  unsigned int filters(ret->filters());
+  ret->setFilters(filters & (~((filters & 0x55555555) << 1)));
 
   return ret.release();
 }

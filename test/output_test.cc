@@ -21,11 +21,10 @@ TEST(ImageWriterTest, WritePpm16Bit) {
   fb.open(
       "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
       std::ios::in | std::ios::binary);
-  refinery::UnpackSettings settings; // almost ignored. FIXME improve API
-  settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
+  std::auto_ptr<refinery::Image> imagePtr(
+      reader.readImage(fb, "image/x-portable-pixmap"));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
@@ -50,11 +49,10 @@ TEST(ImageWriterTest, WritePpm8Bit) {
   fb.open(
       "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
       std::ios::in | std::ios::binary);
-  refinery::UnpackSettings settings; // almost ignored. FIXME improve API
-  settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
+  std::auto_ptr<refinery::Image> imagePtr(
+      reader.readImage(fb, "image/x-portable-pixmap"));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.

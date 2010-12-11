@@ -10,10 +10,10 @@ test: test/gtest_main
 	LD_LIBRARY_PATH=obj test/gtest_main
 
 test/gtest_main: test/*.cc include/refinery/*.h obj/librefinery.so
-	${CXX} ${CXXFLAGS} test/*.cc -lpthread -lgtest -Lobj -lrefinery -o test/gtest_main
+	${CXX} ${CXXFLAGS} test/*.cc -lpthread -lgtest -lexiv2 -Lobj -lrefinery -o test/gtest_main
 
 obj/librefinery.so: obj/image.o obj/input.o obj/interpolate.o obj/output.o obj/unpack.o
-	${CXX} -shared $^ -o $@
+	${CXX} -shared $^ -lexiv2 -o $@
 
 obj/image.o: src/image.cc include/refinery/image.h
 	${CXX} -c ${CXXFLAGS} $< -o $@

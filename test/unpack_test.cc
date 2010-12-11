@@ -5,6 +5,10 @@
 #include <fstream>
 #include <memory>
 
+#include <exiv2/exif.hpp>
+#include <exiv2/image.hpp>
+#include <exiv2/tags.hpp>
+
 #include "refinery/image.h"
 
 namespace {
@@ -13,83 +17,31 @@ class ImageReaderTest : public ::testing::Test {
 };
 
 TEST(ImageReaderTest, NikonD5000) {
-  std::filebuf fb;
-  fb.open("./test/files/nikon-d5000-1.nef", std::ios::in | std::ios::binary);
-  const int offset = 1083530; // Exif.SubImage2.StripOffsets
-  fb.pubseekoff(offset, std::ios::beg);
+  const char* path = "./test/files/nikon-d5000-1.nef";
 
-  refinery::UnpackSettings settings;
-  settings.bps = 12; // Exif.SubImage2.BitsPerSample12
-  settings.width = 4352; // Exif.SubImage2.ImageWidth
-  settings.height = 2868; // Exif.SubImage2.ImageLength
-  settings.length = 9938252; // Exif.SubImage2.StripByteCounts
-  settings.format = refinery::UnpackSettings::FORMAT_NEF_COMPRESSED_LOSSY_2;
-      // Exif.SubImage2.Compression, Exif.Nikon3.NEFCompression
-  // First stuff in linearization table:
-  // 0x4420, 0x0148, 0x0148, 0x0148, 0x0148, 0x0101
-  // (see http://lclevy.free.fr/nef/ to learn what it means)
-  settings.version0 = 0x44;
-  settings.version1 = 0x20;
-  settings.vpred[0][0] = 0x0148;
-  settings.vpred[0][1] = 0x0148;
-  settings.vpred[1][0] = 0x0148;
-  settings.vpred[1][1] = 0x0148;
-  settings.filters = 0x4b4b4b4b;
-  const unsigned short linearization_table[] = {
-    // Exif.Nikon3.LinearizationTable
-    0x0000, 0x0010, 0x0020, 0x0030, 0x0040, 0x0050, 0x0060, 0x0070,
-    0x008f, 0x00af, 0x00cf, 0x00ef, 0x0111, 0x0141, 0x0171, 0x01a1,
-    0x01d1, 0x020c, 0x024c, 0x028c, 0x02cc, 0x0312, 0x0362, 0x03b2,
-    0x0402, 0x0455, 0x04b5, 0x0515, 0x0575, 0x05d6, 0x0646, 0x06b6,
-    0x0726, 0x0796, 0x0815, 0x0895, 0x0915, 0x0995, 0x0a24, 0x0ab4,
-    0x0b44, 0x0bd4, 0x0c72, 0x0d12, 0x0db2, 0x0e52, 0x0f00, 0x0fb0,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff, 0x0fff,
-    0x0fff
-  };
-  std::vector<unsigned short> linearization_vector(
-    &linearization_table[0], &linearization_table[257]);
-  settings.linearization_table = linearization_vector;
-  settings.split = 0;
+  Exiv2::Image::AutoPtr exivImage(Exiv2::ImageFactory::open(path));
+
+  exivImage->readMetadata();
+  const Exiv2::ExifData& exifData(exivImage->exifData());
+
+  int width = exivImage->pixelWidth();
+  int height = exivImage->pixelHeight();
+  const char* mimeType = exivImage->mimeType().c_str();
+
+  std::filebuf fb;
+  fb.open(path, std::ios::in | std::ios::binary);
 
   refinery::ImageReader reader;
 
-  fb.pubseekoff(offset, std::ios::beg);
-
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
+  std::auto_ptr<refinery::Image> imagePtr(
+      reader.readImage(fb, mimeType, width, height, &exifData));
   refinery::Image& image(*imagePtr);
 
-  EXPECT_EQ(offset + settings.length, fb.pubseekoff(0, std::ios::cur)) << "whole image was read";
+  EXPECT_EQ(6, image.bytesPerPixel());
+  EXPECT_EQ(height, image.height());
+  EXPECT_EQ(width, image.width());
 
-  EXPECT_EQ(3, image.bytesPerPixel());
-  EXPECT_EQ(settings.height, image.height());
-  EXPECT_EQ(settings.width, image.width());
-
-  EXPECT_EQ(image.bytesPerPixel() * image.height() * image.width(), image.pixels().size());
+  EXPECT_EQ(image.bytesPerPixel() / 2 * image.height() * image.width(), image.pixels().size());
 
   // Spot-check: first pixel, last pixel, a quad in the middle
   const unsigned short (*row)[3];
@@ -128,12 +80,11 @@ TEST(ImageReaderTest, Ppm16Bit) {
   fb.open(
       "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
       std::ios::in | std::ios::binary);
-  refinery::UnpackSettings settings; // almost ignored. FIXME improve API
-  settings.format = refinery::UnpackSettings::FORMAT_PPM;
 
   refinery::ImageReader reader;
 
-  std::auto_ptr<refinery::Image> imagePtr(reader.readImage(fb, settings));
+  std::auto_ptr<refinery::Image> imagePtr(
+      reader.readImage(fb, "image/x-portable-pixmap"));
   refinery::Image& image(*imagePtr);
 
   EXPECT_EQ(101266, fb.pubseekoff(0, std::ios::cur));
