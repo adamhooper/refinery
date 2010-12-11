@@ -384,14 +384,12 @@ private:
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
             LABImage::ConstRowType adjLabPix(labAdjPix[dir][adjDir]);
 
-            int labDiff[3];
-            labDiff[L] = dirLabPix[0][L] - adjLabPix[0][L];
-            labDiff[A] = dirLabPix[0][A] - adjLabPix[0][A];
-            labDiff[B] = dirLabPix[0][B] - adjLabPix[0][B];
+            const int adjDiffL = dirLabPix[0][L] - adjLabPix[0][L];
+            lDiff[dir][adjDir] = std::abs(adjDiffL);
 
-            lDiff[dir][adjDir] = std::abs(labDiff[L]);
-            abDiff[dir][adjDir] =
-                labDiff[A] * labDiff[A] + labDiff[B] * labDiff[B];
+            const int adjDiffA = dirLabPix[0][A] - adjLabPix[0][A];
+            const int adjDiffB = dirLabPix[0][B] - adjLabPix[0][B];
+            abDiff[dir][adjDir] = adjDiffA * adjDiffA + adjDiffB * adjDiffB;
 
             labAdjPix[dir][adjDir]++;
           }
