@@ -3,7 +3,6 @@
 #include "refinery/image.h"
 #include "refinery/input.h"
 
-#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -286,6 +285,23 @@ namespace unpack {
       return new HuffmanDecoder(is, NIKON_TREE[key]);
     }
 
+    inline int decodeDiff(HuffmanDecoder& decoder)
+    {
+      int i = decoder.nextHuffmanValue();
+      int len = i & 0xf;
+      int shl = i >> 4;
+
+      uint16_t bits = decoder.nextBitsValue(len - shl);
+
+      int diff = ((bits << 1) | 1) << shl >> 1;
+
+      if ((diff & 1 << (len - 1)) == 0) {
+        diff -= (1 << len) - !shl;
+      }
+
+      return diff;
+    }
+
   public:
     virtual Image* unpackImage(
         std::streambuf& is, int width, int height, const ExifData* exifDataPtr)
@@ -294,13 +310,10 @@ namespace unpack {
 
       int bitsPerSample = getBitsPerSample(exifData);
 
-      LinearizationCurve curve(exifData, bitsPerSample);
+      const LinearizationCurve curve(exifData, bitsPerSample);
 
       const std::vector<unsigned short>& curveTable(curve.table);
-      const unsigned short curveSize(curveTable.size());
       unsigned short max(curve.max);
-
-      int left_margin = 0;
 
       unsigned short vpred[2][2];
       unsigned short hpred[2];
@@ -332,37 +345,31 @@ namespace unpack {
 
 #if 0
         /* FIXME why isn't this working? */
-        if (settings.split && row == settings.split) {
-          decoder.reset(getDecoder2(is, settings));
+        if (curve.split && row == curve.split) {
+          decoder.reset(getDecoder2(is, exifData));
           min = 16;
           max += 32;
         }
 #endif
 
-        for (int col = 0; col < width; col++) {
+        int col;
+        for (col = 0; col < 2; col++) {
+          int diff = this->decodeDiff(*decoder);
+          hpred[col] = vpred[row & 1][col] += diff;
+          if (hpred[col] + min >= max) {
+            throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
+          }
+          rowPixels[col][rowColors[col]] = curveTable[hpred[col]];
+        }
+
+        for (; col < width; col++) {
           unsigned int colIsOdd = col & 1;
-          int i = decoder->nextHuffmanValue();
-          int len = i & 0xf;
-          int shl = i >> 4;
-
-          uint16_t bits = decoder->nextBitsValue(len - shl);
-
-          int diff = ((bits << 1) | 1) << shl >> 1;
-
-          if ((diff & 1 << (len - 1)) == 0) {
-            diff -= (1 << len) - !shl;
+          int diff = this->decodeDiff(*decoder);
+          hpred[colIsOdd] += diff;
+          if (hpred[colIsOdd] + min >= max) {
+            throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
           }
-          if (col < 2) {
-            hpred[col] = vpred[row & 1][col] += diff;
-          } else {
-            hpred[colIsOdd] += diff;
-          }
-          if (hpred[colIsOdd] + min >= max) throw "Error";
-          if (col - left_margin < width) {
-            unsigned short val = std::min(hpred[colIsOdd], curveSize);
-
-            rowPixels[col][rowColors[colIsOdd]] = curveTable[val];
-          }
+          rowPixels[col][rowColors[colIsOdd]] = curveTable[hpred[colIsOdd]];
         }
       }
 
