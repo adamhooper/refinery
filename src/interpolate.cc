@@ -191,28 +191,6 @@ private:
           static_cast<int>(std::numeric_limits<Image::ValueType>::max()))));
   }
 
-  void rgbToLab(
-      const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
-      const float (&xyz_cam)[3][3])
-  {
-    float x = xyz64Cbrt(0.5
-        + xyz_cam[X][R] * rgb[R]
-        + xyz_cam[X][G] * rgb[G]
-        + xyz_cam[X][B] * rgb[B]);
-    float y = xyz64Cbrt(0.5
-        + xyz_cam[Y][R] * rgb[R]
-        + xyz_cam[Y][G] * rgb[G]
-        + xyz_cam[Y][B] * rgb[B]);
-    float z = xyz64Cbrt(0.5
-        + xyz_cam[Z][R] * rgb[R]
-        + xyz_cam[Z][G] * rgb[G]
-        + xyz_cam[Z][B] * rgb[B]);
-
-    lab[L] = static_cast<LABImage::ValueType>(116.0f * y - (64.0f*16.0f));
-    lab[A] = static_cast<LABImage::ValueType>(500.0f * (x - y));
-    lab[B] = static_cast<LABImage::ValueType>(200.0f * (y - z));
-  }
-
   inline void incrPointers(
       int n, Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
@@ -225,7 +203,7 @@ private:
     dPixBelow += n;
   }
 
-  inline void fillRandBinGPixelAndIncrPointers(
+  inline void fillRandBinGPixel(
       Image::RowType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
@@ -244,7 +222,7 @@ private:
     dPix[0][rowC] = clip(rowCValue);
   }
 
-  inline void fillRandBinBorRPixelAndIncrPointers(
+  inline void fillRandBinBorRPixel(
       Image::RowType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
@@ -260,12 +238,8 @@ private:
     dPix[0][colC] = clip(colCValue);
   }
 
-  void fillRandBinDirectionalImageAndCreateCielab(
-      const Image& image, Image& dirImage, LABImage& labImage,
-      const float (&xyz_cam)[3][3])
+  void fillRandBinDirectionalImage(const Image& image, Image& dirImage)
   {
-    labImage.pixels().assign(image.constPixels().size(), 0);
-
     const int width = image.width(), height = image.height();
     const int top = 3, left = 3, right = width - 3, bottom = height - 3;
 
@@ -277,8 +251,6 @@ private:
       Image::ConstRowType pixBelow(&pix[width]);
       Image::ConstRowType dPixAbove(&dPix[-width]);
       Image::ConstRowType dPixBelow(&dPix[width]);
-
-      LABImage::RowType lPix(&labImage.pixelsRow(row)[left]);
 
       /*
        * We assume the bayer pattern in the filter looks like one of these
@@ -312,22 +284,61 @@ private:
 
       for (int col = left; col < right; col++) {
         if (c == G) {
-          fillRandBinGPixelAndIncrPointers(
+          fillRandBinGPixel(
               dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         } else{
-          fillRandBinBorRPixelAndIncrPointers(
+          fillRandBinBorRPixel(
               dPix, rowC, colC,
               pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         }
 
         dPix[0][c] = pix[0][c];
 
-        rgbToLab(dPix[0], lPix[0], xyz_cam);
-
         dPix++;
-        lPix++;
         incrPointers(1, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
         c = c == G ? rowC : G;
+      }
+    }
+  }
+
+  void rgbToLab(
+      const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
+      const float (&xyz_cam)[3][3])
+  {
+    float x = xyz64Cbrt(0.5
+        + xyz_cam[X][R] * rgb[R]
+        + xyz_cam[X][G] * rgb[G]
+        + xyz_cam[X][B] * rgb[B]);
+    float y = xyz64Cbrt(0.5
+        + xyz_cam[Y][R] * rgb[R]
+        + xyz_cam[Y][G] * rgb[G]
+        + xyz_cam[Y][B] * rgb[B]);
+    float z = xyz64Cbrt(0.5
+        + xyz_cam[Z][R] * rgb[R]
+        + xyz_cam[Z][G] * rgb[G]
+        + xyz_cam[Z][B] * rgb[B]);
+
+    lab[L] = static_cast<LABImage::ValueType>(116.0f * y - (64.0f*16.0f));
+    lab[A] = static_cast<LABImage::ValueType>(500.0f * (x - y));
+    lab[B] = static_cast<LABImage::ValueType>(200.0f * (y - z));
+  }
+
+  void createCielabImage(
+      const Image& image, LABImage& labImage, const float (&xyzCam)[3][3])
+  {
+    const int width = image.width(), height = image.height();
+    const int top = 3, left = 3, right = width - 3, bottom = height - 3;
+
+    labImage.pixels().assign(image.constPixels().size(), 0);
+
+    for (int row = top; row < bottom; row++) {
+      Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
+      LABImage::RowType lPix(&labImage.pixelsRow(row)[left]);
+
+      for (int col = left; col < right; col++) {
+        rgbToLab(pix[0], lPix[0], xyzCam);
+        pix++;
+        lPix++;
       }
     }
   }
@@ -495,13 +506,14 @@ public:
     LABImage vLabImage;
     vLabImage.importAttributes(image);
 
+    fillRandBinDirectionalImage(image, hImage);
+    fillRandBinDirectionalImage(image, vImage);
+
     float xyzCam[3][3];
     fillXyzCam(image, xyzCam);
 
-    fillRandBinDirectionalImageAndCreateCielab(
-        image, hImage, hLabImage, xyzCam);
-    fillRandBinDirectionalImageAndCreateCielab(
-        image, vImage, vLabImage, xyzCam);
+    createCielabImage(hImage, hLabImage, xyzCam);
+    createCielabImage(vImage, vLabImage, xyzCam);
 
     HomogeneityMap homoMap;
     homoMap.importAttributes(image);
