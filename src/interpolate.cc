@@ -302,20 +302,20 @@ private:
 
   void rgbToLab(
       const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
-      const float (&xyz_cam)[3][3])
+      const float (&xyzCam)[3][3])
   {
-    float x = xyz64Cbrt(0.5
-        + xyz_cam[X][R] * rgb[R]
-        + xyz_cam[X][G] * rgb[G]
-        + xyz_cam[X][B] * rgb[B]);
-    float y = xyz64Cbrt(0.5
-        + xyz_cam[Y][R] * rgb[R]
-        + xyz_cam[Y][G] * rgb[G]
-        + xyz_cam[Y][B] * rgb[B]);
-    float z = xyz64Cbrt(0.5
-        + xyz_cam[Z][R] * rgb[R]
-        + xyz_cam[Z][G] * rgb[G]
-        + xyz_cam[Z][B] * rgb[B]);
+    float x = xyz64Cbrt(0.5f
+        + xyzCam[X][R] * rgb[R]
+        + xyzCam[X][G] * rgb[G]
+        + xyzCam[X][B] * rgb[B]);
+    float y = xyz64Cbrt(0.5f
+        + xyzCam[Y][R] * rgb[R]
+        + xyzCam[Y][G] * rgb[G]
+        + xyzCam[Y][B] * rgb[B]);
+    float z = xyz64Cbrt(0.5f
+        + xyzCam[Z][R] * rgb[R]
+        + xyzCam[Z][G] * rgb[G]
+        + xyzCam[Z][B] * rgb[B]);
 
     lab[L] = static_cast<LABImage::ValueType>(116.0f * y - (64.0f*16.0f));
     lab[A] = static_cast<LABImage::ValueType>(500.0f * (x - y));
