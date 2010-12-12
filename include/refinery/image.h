@@ -22,6 +22,14 @@ struct Point {
   Point operator-(const Point& point) const {
     return Point(row - point.row, col - point.col);
   }
+
+  bool operator==(const Point& rhs) const {
+    return this->row == rhs.row && this->col == rhs.col;
+  }
+
+  bool operator!=(const Point& rhs) const {
+    return !(this->operator==(rhs));
+  }
 };
 
 template<typename T, std::size_t N = 3> class TypedImage {
