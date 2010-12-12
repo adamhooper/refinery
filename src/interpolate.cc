@@ -330,7 +330,7 @@ private:
     dPix[0][colC] = clamp16(colCValue);
   }
 
-  void fillRandBinDirectionalImage(const Image& image, ImageTile& dirImageTile)
+  void fillDirectionalImage(const Image& image, ImageTile& dirImageTile)
   {
     const unsigned int top = dirImageTile.top() + 1;
     const unsigned int left = dirImageTile.left() + 1;
@@ -341,15 +341,6 @@ private:
     const int dWidth = dirImageTile.width();
 
     for (unsigned int row = top; row < bottom; row++) {
-      ImageTile::PixelsType dPix(
-          &dirImageTile.pixelsAtImageCoords(row, left)[0]);
-      ImageTile::ConstPixelsType dPixAbove(&dPix[-dWidth]);
-      ImageTile::ConstPixelsType dPixBelow(&dPix[dWidth]);
-
-      Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
-      Image::ConstRowType pixAbove(&pix[-width]);
-      Image::ConstRowType pixBelow(&pix[width]);
-
       /*
        * We assume the bayer pattern in the filter looks like one of these
        * (copied from dcraw comments):
@@ -380,22 +371,40 @@ private:
         colC = 2 - c;
       }
 
-      for (unsigned int col = left; col < right; col++) {
-        dPix[0][c] = pix[0][c];
+      ImageTile::PixelsType dPix(
+          &dirImageTile.pixelsAtImageCoords(row, left + (c != G))[0]);
+      ImageTile::ConstPixelsType dPixAbove(&dPix[-dWidth]);
+      ImageTile::ConstPixelsType dPixBelow(&dPix[dWidth]);
 
-        if (c == G) {
-          fillRandBinGPixel(
-              dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
-          c = rowC;
-        } else{
-          fillRandBinBorRPixel(
-              dPix, rowC, colC,
-              pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
-          c = G;
-        }
+      Image::ConstRowType pix(&image.constPixelsRow(row)[left + (c != G)]);
+      Image::ConstRowType pixAbove(&pix[-width]);
+      Image::ConstRowType pixBelow(&pix[width]);
 
-        dPix++;
-        incrPointers(1, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+      for (unsigned int col = left + (c != G); col < right; col += 2) {
+        dPix[0][G] = pix[0][G];
+
+        fillRandBinGPixel(
+            dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+        dPix += 2;
+        incrPointers(2, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+      }
+
+      dPix = &dirImageTile.pixelsAtImageCoords(row, left + (c == G))[0];
+      dPixAbove = &dPix[-dWidth];
+      dPixBelow = &dPix[dWidth];
+
+      pix = &image.constPixelsRow(row)[left + (c == G)];
+      pixAbove = &pix[-width];
+      pixBelow = &pix[width];
+
+      for (unsigned int col = left + (c == G); col < right; col += 2) {
+        dPix[0][rowC] = pix[0][rowC];
+
+        fillRandBinBorRPixel(
+            dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
+
+        dPix += 2;
+        incrPointers(2, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
       }
     }
   }
@@ -645,8 +654,8 @@ public:
 
         createGreenDirectionalImages(image, hImageTile, vImageTile);
 
-        fillRandBinDirectionalImage(image, hImageTile);
-        fillRandBinDirectionalImage(image, vImageTile);
+        fillDirectionalImage(image, hImageTile);
+        fillDirectionalImage(image, vImageTile);
 
         createCielabImage(hImageTile, hLabImageTile, xyzCam);
         createCielabImage(vImageTile, vLabImageTile, xyzCam);
