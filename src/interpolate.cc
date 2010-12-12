@@ -109,14 +109,12 @@ public:
 typedef TypedImageTile<unsigned short, 3> RGBImageTile;
 typedef RGBImageTile ImageTile;
 typedef TypedImageTile<short, 3> LABImageTile;
-typedef TypedImageTile<unsigned char, 2> HomogeneityTile;
+typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
 
 static std::vector<float> xyzCbrtLookup; // FIXME make singleton
 
 class AHDInterpolator {
 private:
-  typedef TypedImage<unsigned char, 2> HomogeneityMap;
-
   typedef Image::Color Color;
 
   static const Color R = Image::R;
@@ -543,7 +541,7 @@ private:
 
   void refillImage(
       Image& image, const ImageTile& hImageTile, const ImageTile& vImageTile,
-      const HomogeneityTile& homoTile)
+      HomogeneityTile& homoTile)
   {
     const unsigned int top = hImageTile.top() + 3;
     const unsigned int left = hImageTile.left() + 3;
@@ -553,21 +551,13 @@ private:
     const int tileWidth = hImageTile.width();
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::RowType pix(&image.pixelsRow(row)[left]);
-
-      ImageTile::ConstPixelsType hPix(
-          &hImageTile.constPixelsAtImageCoords(row, left)[0]);
-      ImageTile::ConstPixelsType vPix(
-          &vImageTile.constPixelsAtImageCoords(row, left)[0]);
-
-      HomogeneityTile::ConstPixelsType homoPix(
-          &homoTile.constPixelsAtImageCoords(row, left)[0]);
+      HomogeneityTile::PixelsType homoPix(
+          &homoTile.pixelsAtImageCoords(row, left)[0]);
       HomogeneityTile::ConstPixelsType homoPixAbove(&homoPix[-tileWidth]);
       HomogeneityTile::ConstPixelsType homoPixBelow(&homoPix[tileWidth]);
 
       for (unsigned int col = left; col < right;
-          col++, pix++, hPix++, vPix++,
-          homoPix++, homoPixAbove++, homoPixBelow++) {
+          col++, homoPix++, homoPixAbove++, homoPixBelow++) {
 
         unsigned int hm[2] = { 0, 0 };
         for (unsigned int dir = H; dir <= V; dir++) {
@@ -578,11 +568,27 @@ private:
           }
         }
 
-        if (hm[H] > hm[V]) {
+        homoPix[0][2] = hm[H] - hm[V];
+      }
+    }
+
+    for (unsigned int row = top; row < bottom; row++) {
+      Image::RowType pix(&image.pixelsRow(row)[left]);
+
+      HomogeneityTile::ConstPixelsType homoPix(
+          &homoTile.constPixelsAtImageCoords(row, left)[0]);
+      ImageTile::ConstPixelsType hPix(
+          &hImageTile.constPixelsAtImageCoords(row, left)[0]);
+      ImageTile::ConstPixelsType vPix(
+          &vImageTile.constPixelsAtImageCoords(row, left)[0]);
+
+      for (unsigned int col = left; col < right;
+          col++, pix++, hPix++, vPix++, homoPix++) {
+        if (homoPix[0][2] > 0) {
           for (Color c = R; c <= B; c++) {
             pix[0][c] = hPix[0][c];
           }
-        } else if (hm[V] > hm[H]) {
+        } else if (homoPix[0][2] < 0) {
           for (Color c = R; c <= B; c++) {
             pix[0][c] = vPix[0][c];
           }
