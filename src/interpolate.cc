@@ -34,39 +34,54 @@ private:
   Point mImageSize;
   Point mTopLeft;
   Point mSize;
+  unsigned int mEdgeSize;
   StorageType mPixels;
 
-  void allocate() {
+  void allocate()
+  {
     mPixels.assign(mSize.row * mSize.col * N, 0);
+  }
+
+  ptrdiff_t offsetForImagePoint(const Point& imagePoint) const
+  {
+    Point tilePoint(imagePoint - mTopLeft);
+    return (tilePoint.row * mSize.col + tilePoint.col) * N;
   }
 
 public:
   TypedImageTile(
-      const Point& imageSize, const Point& topLeft, const Point& size)
-    : mImageSize(imageSize), mTopLeft(topLeft), mSize(size)
+      const Point& imageSize, const Point& topLeft, const Point& size,
+      unsigned int border, unsigned int margin)
+    : mImageSize(imageSize), mTopLeft(topLeft), mSize(size),
+      mEdgeSize(static_cast<unsigned int>(border - margin))
   {
     this->allocate();
   }
 
-  Point absoluteToRelative(const Point& absolute) const {
-    return absolute - mTopLeft;
+  unsigned int top() const {
+    return std::max<unsigned int>(mTopLeft.row, mEdgeSize);
   }
-  Point relativeToAbsolute(const Point& relative) const {
-    return mTopLeft + relative;
+  unsigned int left() const {
+    return std::max<unsigned int>(mTopLeft.col, mEdgeSize);
   }
-
-  unsigned int top() const { return mTopLeft.row; }
-  unsigned int left() const { return mTopLeft.col; }
-  unsigned int height() const { return mSize.row; }
-  unsigned int width() const { return mSize.col; }
+  unsigned int height() const {
+    return mSize.row;
+  }
+  unsigned int width() const {
+    return mSize.col;
+  }
   unsigned int bottom() const {
-    return std::min(mImageSize.row, mTopLeft.row + mSize.row);
+    return std::min<unsigned int>(
+        mImageSize.row - mEdgeSize,
+        mTopLeft.row + mSize.row);
   }
   unsigned int right() const {
-    return std::min(mImageSize.col, mTopLeft.col + mSize.col);
+    return std::min<unsigned int>(
+        mImageSize.col - mEdgeSize,
+        mTopLeft.col + mSize.col);
   }
 
-  void setTopLeft(int top, int left) { mTopLeft = Point(top, left); }
+  void setTopLeft(const Point& topLeft) { mTopLeft = topLeft; }
   void setSize(int height, int width) {
     Point newSize(height, width);
     if (newSize != mSize) {
@@ -75,13 +90,19 @@ public:
     }
   }
 
+  PixelsType pixelsAtImageCoords(const Point& point) {
+    const ptrdiff_t offset(offsetForImagePoint(point));
+    return reinterpret_cast<PixelsType>(&mPixels[offset]);
+  }
   PixelsType pixelsAtImageCoords(int row, int col) {
-    return reinterpret_cast<PixelsType>(
-        &mPixels[(row*mImageSize.col + col) * N]);
+    return pixelsAtImageCoords(Point(row, col));
+  }
+  ConstPixelsType constPixelsAtImageCoords(const Point& point) const {
+    const ptrdiff_t offset(offsetForImagePoint(point));
+    return reinterpret_cast<ConstPixelsType>(&mPixels[offset]);
   }
   ConstPixelsType constPixelsAtImageCoords(int row, int col) const {
-    return reinterpret_cast<ConstPixelsType>(
-        &mPixels[(row*mImageSize.col + col) * N]);
+    return constPixelsAtImageCoords(Point(row, col));
   }
 };
 
@@ -215,10 +236,10 @@ private:
   void createGreenDirectionalImages(
       const Image& image, ImageTile& hImageTile, ImageTile& vImageTile)
   {
-    const unsigned int top = hImageTile.top() + 2;
-    const unsigned int left = hImageTile.left() + 2;
-    const unsigned int right = hImageTile.right() - 2;
-    const unsigned int bottom = hImageTile.bottom() - 2;
+    const unsigned int top = hImageTile.top();
+    const unsigned int left = hImageTile.left();
+    const unsigned int right = hImageTile.right();
+    const unsigned int bottom = hImageTile.bottom();
 
     const int width = image.width();
 
@@ -262,7 +283,8 @@ private:
   inline void incrPointers(
       int n, Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+      ImageTile::ConstPixelsType& dPixAbove,
+      ImageTile::ConstPixelsType& dPixBelow)
   {
     pix += n;
     pixAbove += n;
@@ -272,10 +294,11 @@ private:
   }
 
   inline void fillRandBinGPixel(
-      Image::RowType& dPix, const Color& rowC, const Color& colC,
+      ImageTile::PixelsType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+      ImageTile::ConstPixelsType& dPixAbove,
+      ImageTile::ConstPixelsType& dPixBelow)
   {
     const Image::ValueType colCValue =
         pix[0][G] +
@@ -291,10 +314,11 @@ private:
   }
 
   inline void fillRandBinBorRPixel(
-      Image::RowType& dPix, const Color& rowC, const Color& colC,
+      ImageTile::PixelsType& dPix, const Color& rowC, const Color& colC,
       Image::ConstRowType& pix,
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
+      ImageTile::ConstPixelsType& dPixAbove,
+      ImageTile::ConstPixelsType& dPixBelow)
   {
     const Image::ValueType colCValue =
         dPix[0][G] +
@@ -308,10 +332,10 @@ private:
 
   void fillRandBinDirectionalImage(const Image& image, ImageTile& dirImageTile)
   {
-    const unsigned int top = dirImageTile.top() + 3;
-    const unsigned int left = dirImageTile.left() + 3;
-    const unsigned int right = dirImageTile.right() - 3;
-    const unsigned int bottom = dirImageTile.bottom() - 3;
+    const unsigned int top = dirImageTile.top() + 1;
+    const unsigned int left = dirImageTile.left() + 1;
+    const unsigned int right = dirImageTile.right() - 1;
+    const unsigned int bottom = dirImageTile.bottom() - 1;
 
     const int width = image.width();
     const int dWidth = dirImageTile.width();
@@ -402,10 +426,10 @@ private:
       const ImageTile& imageTile, LABImageTile& labImageTile,
       const float (&xyzCam)[3][3])
   {
-    const unsigned int top = imageTile.top() + 3;
-    const unsigned int left = imageTile.left() + 3;
-    const unsigned int right = imageTile.right() - 3;
-    const unsigned int bottom = imageTile.bottom() - 3;
+    const unsigned int top = imageTile.top() + 1;
+    const unsigned int left = imageTile.left() + 1;
+    const unsigned int right = imageTile.right() - 1;
+    const unsigned int bottom = imageTile.bottom() - 1;
 
     for (unsigned int row = top; row < bottom; row++) {
       ImageTile::ConstPixelsType pix(
@@ -433,10 +457,10 @@ private:
       const LABImageTile& hLabImageTile, const LABImageTile& vLabImageTile,
       HomogeneityTile& homoTile)
   {
-    const unsigned int top = hLabImageTile.top() + 4;
-    const unsigned int left = hLabImageTile.left() + 4;
-    const unsigned int right = hLabImageTile.right() - 4;
-    const unsigned int bottom = hLabImageTile.bottom() - 4;
+    const unsigned int top = hLabImageTile.top() + 2;
+    const unsigned int left = hLabImageTile.left() + 2;
+    const unsigned int right = hLabImageTile.right() - 2;
+    const unsigned int bottom = hLabImageTile.bottom() - 2;
 
     const int width = hLabImageTile.width();
 
@@ -512,10 +536,10 @@ private:
       Image& image, const ImageTile& hImageTile, const ImageTile& vImageTile,
       const HomogeneityTile& homoTile)
   {
-    const unsigned int top = hImageTile.top() + 5;
-    const unsigned int left = hImageTile.left() + 5;
-    const unsigned int right = hImageTile.right() - 5;
-    const unsigned int bottom = hImageTile.bottom() - 5;
+    const unsigned int top = hImageTile.top() + 3;
+    const unsigned int left = hImageTile.left() + 3;
+    const unsigned int right = hImageTile.right() - 3;
+    const unsigned int bottom = hImageTile.bottom() - 3;
 
     const int tileWidth = hImageTile.width();
 
@@ -576,33 +600,62 @@ private:
 
 public:
   void interpolate(Image& image) {
-    interpolateBorder(image, 5);
-
-    Point imageSize(image.height(), image.width());
-    Point tileTopLeft(0, 0);
-    Point tileSize(imageSize);
-
-    ImageTile hImageTile(imageSize, tileTopLeft, tileSize);
-    ImageTile vImageTile(imageSize, tileTopLeft, tileSize);
-
-    createGreenDirectionalImages(image, hImageTile, vImageTile);
-
-    fillRandBinDirectionalImage(image, hImageTile);
-    fillRandBinDirectionalImage(image, vImageTile);
-
-    LABImageTile hLabImageTile(imageSize, tileTopLeft, tileSize);
-    LABImageTile vLabImageTile(imageSize, tileTopLeft, tileSize);
+    const unsigned int border = 5;
 
     float xyzCam[3][3];
     fillXyzCam(image, xyzCam);
 
-    createCielabImage(hImageTile, hLabImageTile, xyzCam);
-    createCielabImage(vImageTile, vLabImageTile, xyzCam);
+    interpolateBorder(image, border);
 
-    HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize);
-    fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
+    const unsigned int height = image.height();
+    const unsigned int width = image.width();
 
-    refillImage(image, hImageTile, vImageTile, homoTile);
+    const unsigned int tileHeight = 256;
+    const unsigned int tileWidth = 256;
+
+    const unsigned int margin = 3;
+    const unsigned int left = border - margin;
+    const unsigned int top = border - margin;
+    const unsigned int bottom = height - border;
+    const unsigned int right = width - border;
+
+    Point imageSize(height, width);
+    Point tileTopLeft(border - margin, border - margin);
+    Point tileSize(tileHeight, tileWidth);
+
+    ImageTile hImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+    ImageTile vImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+    LABImageTile hLabImageTile(
+        imageSize, tileTopLeft, tileSize, border, margin);
+    LABImageTile vLabImageTile(
+        imageSize, tileTopLeft, tileSize, border, margin);
+    HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize, border, margin);
+
+    for (unsigned int row = top; row < bottom; row += tileHeight - 2*margin) {
+      tileTopLeft.row = row;
+
+      for (unsigned int col = left; col < right; col += tileWidth - 2*margin) {
+        tileTopLeft.col = col;
+
+        hImageTile.setTopLeft(tileTopLeft);
+        vImageTile.setTopLeft(tileTopLeft);
+        hLabImageTile.setTopLeft(tileTopLeft);
+        vLabImageTile.setTopLeft(tileTopLeft);
+        homoTile.setTopLeft(tileTopLeft);
+
+        createGreenDirectionalImages(image, hImageTile, vImageTile);
+
+        fillRandBinDirectionalImage(image, hImageTile);
+        fillRandBinDirectionalImage(image, vImageTile);
+
+        createCielabImage(hImageTile, hLabImageTile, xyzCam);
+        createCielabImage(vImageTile, vLabImageTile, xyzCam);
+
+        fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
+
+        refillImage(image, hImageTile, vImageTile, homoTile);
+      }
+    }
   }
 };
 
