@@ -22,6 +22,74 @@ static const float RgbCam[3][4] = { // FIXME: not const!
 
 static const float D65White[3] = { 0.950456, 1, 1.088754 };
 
+template<typename T, std::size_t N = 3> class TypedImageTile {
+public:
+  typedef TypedImage<T,N> ImageType;
+  typedef typename ImageType::ValueType ValueType;
+  typedef ValueType (*PixelsType)[N];
+  typedef const ValueType (*ConstPixelsType)[N];
+
+private:
+  typedef std::vector<ValueType> StorageType;
+  Point mImageSize;
+  Point mTopLeft;
+  Point mSize;
+  StorageType mPixels;
+
+  void allocate() {
+    mPixels.assign(mSize.row * mSize.col * N, 0);
+  }
+
+public:
+  TypedImageTile(
+      const Point& imageSize, const Point& topLeft, const Point& size)
+    : mImageSize(imageSize), mTopLeft(topLeft), mSize(size)
+  {
+    this->allocate();
+  }
+
+  Point absoluteToRelative(const Point& absolute) const {
+    return absolute - mTopLeft;
+  }
+  Point relativeToAbsolute(const Point& relative) const {
+    return mTopLeft + relative;
+  }
+
+  unsigned int top() const { return mTopLeft.row; }
+  unsigned int left() const { return mTopLeft.col; }
+  unsigned int height() const { return mSize.row; }
+  unsigned int width() const { return mSize.col; }
+  unsigned int bottom() const {
+    return std::min(mImageSize.row, mTopLeft.row + mSize.row);
+  }
+  unsigned int right() const {
+    return std::min(mImageSize.col, mTopLeft.col + mSize.col);
+  }
+
+  void setTopLeft(int top, int left) { mTopLeft = Point(top, left); }
+  void setSize(int height, int width) {
+    Point newSize(height, width);
+    if (newSize != mSize) {
+      mSize = newSize;
+      this->allocate();
+    }
+  }
+
+  PixelsType pixelsAtImageCoords(int row, int col) {
+    return reinterpret_cast<PixelsType>(
+        &mPixels[(row*mImageSize.col + col) * N]);
+  }
+  ConstPixelsType constPixelsAtImageCoords(int row, int col) const {
+    return reinterpret_cast<ConstPixelsType>(
+        &mPixels[(row*mImageSize.col + col) * N]);
+  }
+};
+
+typedef TypedImageTile<unsigned short, 3> RGBImageTile;
+typedef RGBImageTile ImageTile;
+typedef TypedImageTile<short, 3> LABImageTile;
+typedef TypedImageTile<unsigned char, 2> HomogeneityTile;
+
 static std::vector<float> xyzCbrtLookup; // FIXME make singleton
 
 class AHDInterpolator {
@@ -145,16 +213,18 @@ private:
   }
 
   void createGreenDirectionalImages(
-      const Image& image, Image& hImage, Image& vImage)
+      const Image& image, ImageTile& hImageTile, ImageTile& vImageTile)
   {
-    const int width = image.width(), height = image.height();
-    const int top = 2, left = 2, right = width - 2, bottom = height - 2;
+    const unsigned int top = hImageTile.top() + 2;
+    const unsigned int left = hImageTile.left() + 2;
+    const unsigned int right = hImageTile.right() - 2;
+    const unsigned int bottom = hImageTile.bottom() - 2;
 
-    hImage.pixels().assign(image.constPixels().size(), 0);
-    vImage.pixels().assign(image.constPixels().size(), 0);
+    const int width = image.width();
 
-    for (int row = top; row < bottom; row++) {
-      int col = left + (image.colorAtPoint(Point(row, left)) & 1); // 1st R or B
+    for (unsigned int row = top; row < bottom; row++) {
+      unsigned int col =
+          left + (image.colorAtPoint(Point(row, left)) & 1); // 1st R or B
 
       Image::ConstRowType pix(&image.constPixelsRow(row)[col]);
 
@@ -163,8 +233,8 @@ private:
       Image::ConstRowType pixBelow(&pix[width]);
       Image::ConstRowType pix2Below(&pix[2 * width]);
 
-      Image::RowType hPix(&hImage.pixelsRow(row)[col]);
-      Image::RowType vPix(&vImage.pixelsRow(row)[col]);
+      ImageTile::PixelsType hPix(&hImageTile.pixelsAtImageCoords(row, col)[0]);
+      ImageTile::PixelsType vPix(&vImageTile.pixelsAtImageCoords(row, col)[0]);
 
       Color c(image.colorAtPoint(Point(row, col)));
 
@@ -207,13 +277,13 @@ private:
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
       Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
   {
-    Image::ValueType colCValue =
+    const Image::ValueType colCValue =
         pix[0][G] +
         ((pixAbove[0][colC] + pixBelow[0][colC]
           - dPixAbove[0][G] - dPixBelow[0][G]) >> 1);
     dPix[0][colC] = clamp16(colCValue);
 
-    Image::ValueType rowCValue =
+    const Image::ValueType rowCValue =
         pix[0][G] +
         ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
           >> 1);
@@ -226,7 +296,7 @@ private:
       Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
       Image::ConstRowType& dPixAbove, Image::ConstRowType& dPixBelow)
   {
-    Image::ValueType colCValue =
+    const Image::ValueType colCValue =
         dPix[0][G] +
         ((pixAbove[-1][colC] + pixAbove[1][colC]
           + pixBelow[-1][colC] + pixBelow[1][colC]
@@ -236,29 +306,35 @@ private:
     dPix[0][colC] = clamp16(colCValue);
   }
 
-  void fillRandBinDirectionalImage(const Image& image, Image& dirImage)
+  void fillRandBinDirectionalImage(const Image& image, ImageTile& dirImageTile)
   {
-    const int width = image.width(), height = image.height();
-    const int top = 3, left = 3, right = width - 3, bottom = height - 3;
+    const unsigned int top = dirImageTile.top() + 3;
+    const unsigned int left = dirImageTile.left() + 3;
+    const unsigned int right = dirImageTile.right() - 3;
+    const unsigned int bottom = dirImageTile.bottom() - 3;
 
-    for (int row = top; row < bottom; row++) {
-      Image::RowType dPix(&dirImage.pixelsRow(row)[left]);
+    const int width = image.width();
+    const int dWidth = dirImageTile.width();
+
+    for (unsigned int row = top; row < bottom; row++) {
+      ImageTile::PixelsType dPix(
+          &dirImageTile.pixelsAtImageCoords(row, left)[0]);
+      ImageTile::ConstPixelsType dPixAbove(&dPix[-dWidth]);
+      ImageTile::ConstPixelsType dPixBelow(&dPix[dWidth]);
+
       Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
-
       Image::ConstRowType pixAbove(&pix[-width]);
       Image::ConstRowType pixBelow(&pix[width]);
-      Image::ConstRowType dPixAbove(&dPix[-width]);
-      Image::ConstRowType dPixBelow(&dPix[width]);
 
       /*
        * We assume the bayer pattern in the filter looks like one of these
        * (copied from dcraw comments):
        *
-       *    0 1 2 3 4 5   0 1 2 3 4 5   0 1 2 3 4 5   0 1 2 3 4 5
-       *    0 B G B G B G 0 G R G R G R 0 G B G B G B 0 R G R G R G
-       *    1 G R G R G R 1 B G B G B G 1 R G R G R G 1 G B G B G B
-       *    2 B G B G B G 2 G R G R G R 2 G B G B G B 2 R G R G R G
-       *    3 G R G R G R 3 B G B G B G 3 R G R G R G 3 G B G B G B
+       *    0 1 2 3 4 5    0 1 2 3 4 5    0 1 2 3 4 5    0 1 2 3 4 5
+       *    0 B G B G B G  0 G R G R G R  0 G B G B G B  0 R G R G R G
+       *    1 G R G R G R  1 B G B G B G  1 R G R G R G  1 G B G B G B
+       *    2 B G B G B G  2 G R G R G R  2 G B G B G B  2 R G R G R G
+       *    3 G R G R G R  3 B G B G B G  3 R G R G R G  3 G B G B G B
        *
        * So we know:
        * - every 2nd row starts with the same color; the other is green
@@ -280,7 +356,7 @@ private:
         colC = 2 - c;
       }
 
-      for (int col = left; col < right; col++) {
+      for (unsigned int col = left; col < right; col++) {
         dPix[0][c] = pix[0][c];
 
         if (c == G) {
@@ -323,18 +399,22 @@ private:
   }
 
   void createCielabImage(
-      const Image& image, LABImage& labImage, const float (&xyzCam)[3][3])
+      const ImageTile& imageTile, LABImageTile& labImageTile,
+      const float (&xyzCam)[3][3])
   {
-    const int width = image.width(), height = image.height();
-    const int top = 3, left = 3, right = width - 3, bottom = height - 3;
+    const unsigned int top = imageTile.top() + 3;
+    const unsigned int left = imageTile.left() + 3;
+    const unsigned int right = imageTile.right() - 3;
+    const unsigned int bottom = imageTile.bottom() - 3;
 
-    labImage.pixels().assign(image.constPixels().size(), 0);
+    for (unsigned int row = top; row < bottom; row++) {
+      ImageTile::ConstPixelsType pix(
+          &imageTile.constPixelsAtImageCoords(row, left)[0]);
 
-    for (int row = top; row < bottom; row++) {
-      Image::ConstRowType pix(&image.constPixelsRow(row)[left]);
-      LABImage::RowType lPix(&labImage.pixelsRow(row)[left]);
+      LABImageTile::PixelsType lPix(
+          &labImageTile.pixelsAtImageCoords(row, left)[0]);
 
-      for (int col = left; col < right; col++) {
+      for (unsigned int col = left; col < right; col++) {
         rgbToLab(pix[0], lPix[0], xyzCam);
         pix++;
         lPix++;
@@ -350,38 +430,41 @@ private:
   }
 
   void fillHomogeneityMap(
-      const LABImage& hLabImage, const LABImage& vLabImage,
-      HomogeneityMap& homoMap)
+      const LABImageTile& hLabImageTile, const LABImageTile& vLabImageTile,
+      HomogeneityTile& homoTile)
   {
-    const int width = hLabImage.width(), height = hLabImage.height();
-    const int top = 4, left = 4, right = width - 4, bottom = height - 4;
-    unsigned int lDiff[2][4], abDiff[2][4];
+    const unsigned int top = hLabImageTile.top() + 4;
+    const unsigned int left = hLabImageTile.left() + 4;
+    const unsigned int right = hLabImageTile.right() - 4;
+    const unsigned int bottom = hLabImageTile.bottom() - 4;
 
-    const int adj[4] = { -1, 1, -width, width };
+    const int width = hLabImageTile.width();
 
-    homoMap.pixels().assign(hLabImage.constPixels().size() * 2 / 3, 0);
+    const int ADJ[4] = { -1, 1, -width, width };
 
-    for (int row = top; row < bottom; row++) {
-      HomogeneityMap::RowType homoPix(&homoMap.pixelsRow(row)[left]);
+    for (unsigned int row = top; row < bottom; row++) {
+      HomogeneityTile::PixelsType homoPix(
+          &homoTile.pixelsAtImageCoords(row, left)[0]);
 
-      LABImage::ConstRowType labPix[2] = {
-        &hLabImage.constPixelsRow(row)[left],
-        &vLabImage.constPixelsRow(row)[left]
+      LABImageTile::ConstPixelsType labPix[2] = {
+        &hLabImageTile.constPixelsAtImageCoords(row, left)[0],
+        &vLabImageTile.constPixelsAtImageCoords(row, left)[0]
       };
 
-      LABImage::ConstRowType labAdjPix[2][4];
+      LABImageTile::ConstPixelsType labAdjPix[2][4];
       for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
-        labAdjPix[H][adjDir] = &labPix[H][adj[adjDir]];
-        labAdjPix[V][adjDir] = &labPix[V][adj[adjDir]];
+        labAdjPix[H][adjDir] = &labPix[H][ADJ[adjDir]];
+        labAdjPix[V][adjDir] = &labPix[V][ADJ[adjDir]];
       }
 
-      for (int col = left; col < right; col++, homoPix++) {
+      for (unsigned int col = left; col < right; col++, homoPix++) {
+        unsigned int lDiff[2][4], abDiff[2][4];
 
         for (unsigned int dir = H; dir <= V; dir++) {
-          LABImage::ConstRowType dirLabPix(labPix[dir]);
+          LABImageTile::ConstPixelsType dirLabPix(labPix[dir]);
 
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
-            LABImage::ConstRowType adjLabPix(labAdjPix[dir][adjDir]);
+            LABImageTile::ConstPixelsType adjLabPix(labAdjPix[dir][adjDir]);
 
             const int adjDiffL = dirLabPix[0][L] - adjLabPix[0][L];
             lDiff[dir][adjDir] = std::abs(adjDiffL);
@@ -426,24 +509,30 @@ private:
   }
 
   void refillImage(
-      Image& image, const Image& hImage, const Image& vImage,
-      const HomogeneityMap& homoMap)
+      Image& image, const ImageTile& hImageTile, const ImageTile& vImageTile,
+      const HomogeneityTile& homoTile)
   {
-    const int width = image.width(), height = image.height();
-    const int top = 5, left = 5, right = width - 5, bottom = height - 5;
+    const unsigned int top = hImageTile.top() + 5;
+    const unsigned int left = hImageTile.left() + 5;
+    const unsigned int right = hImageTile.right() - 5;
+    const unsigned int bottom = hImageTile.bottom() - 5;
 
-    for (int row = top; row < bottom; row++) {
+    const int tileWidth = hImageTile.width();
+
+    for (unsigned int row = top; row < bottom; row++) {
       Image::RowType pix(&image.pixelsRow(row)[left]);
-      Image::ConstRowType hPix(&hImage.constPixelsRow(row)[left]);
-      Image::ConstRowType vPix(&vImage.constPixelsRow(row)[left]);
-      HomogeneityMap::ConstRowType
-          homoPixAbove(&homoMap.constPixelsRow(row-1)[left]);
-      HomogeneityMap::ConstRowType
-          homoPix(&homoMap.constPixelsRow(row)[left]);
-      HomogeneityMap::ConstRowType
-          homoPixBelow(&homoMap.constPixelsRow(row+1)[left]);
 
-      for (int col = left; col < right;
+      ImageTile::ConstPixelsType hPix(
+          &hImageTile.constPixelsAtImageCoords(row, left)[0]);
+      ImageTile::ConstPixelsType vPix(
+          &vImageTile.constPixelsAtImageCoords(row, left)[0]);
+
+      HomogeneityTile::ConstPixelsType homoPix(
+          &homoTile.constPixelsAtImageCoords(row, left)[0]);
+      HomogeneityTile::ConstPixelsType homoPixAbove(&homoPix[-tileWidth]);
+      HomogeneityTile::ConstPixelsType homoPixBelow(&homoPix[tileWidth]);
+
+      for (unsigned int col = left; col < right;
           col++, pix++, hPix++, vPix++,
           homoPix++, homoPixAbove++, homoPixBelow++) {
 
@@ -489,35 +578,31 @@ public:
   void interpolate(Image& image) {
     interpolateBorder(image, 5);
 
-    Image hImage;
-    hImage.importAttributes(image);
+    Point imageSize(image.height(), image.width());
+    Point tileTopLeft(0, 0);
+    Point tileSize(imageSize);
 
-    Image vImage;
-    vImage.importAttributes(image);
+    ImageTile hImageTile(imageSize, tileTopLeft, tileSize);
+    ImageTile vImageTile(imageSize, tileTopLeft, tileSize);
 
-    createGreenDirectionalImages(image, hImage, vImage);
+    createGreenDirectionalImages(image, hImageTile, vImageTile);
 
-    LABImage hLabImage;
-    hLabImage.importAttributes(image);
+    fillRandBinDirectionalImage(image, hImageTile);
+    fillRandBinDirectionalImage(image, vImageTile);
 
-    LABImage vLabImage;
-    vLabImage.importAttributes(image);
-
-    fillRandBinDirectionalImage(image, hImage);
-    fillRandBinDirectionalImage(image, vImage);
+    LABImageTile hLabImageTile(imageSize, tileTopLeft, tileSize);
+    LABImageTile vLabImageTile(imageSize, tileTopLeft, tileSize);
 
     float xyzCam[3][3];
     fillXyzCam(image, xyzCam);
 
-    createCielabImage(hImage, hLabImage, xyzCam);
-    createCielabImage(vImage, vLabImage, xyzCam);
+    createCielabImage(hImageTile, hLabImageTile, xyzCam);
+    createCielabImage(vImageTile, vLabImageTile, xyzCam);
 
-    HomogeneityMap homoMap;
-    homoMap.importAttributes(image);
+    HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize);
+    fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
 
-    fillHomogeneityMap(hLabImage, vLabImage, homoMap);
-
-    refillImage(image, hImage, vImage, homoMap);
+    refillImage(image, hImageTile, vImageTile, homoTile);
   }
 };
 
