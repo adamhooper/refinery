@@ -125,7 +125,7 @@ private:
    */
   float xyz64Cbrt(float f) const
   {
-    unsigned int i(static_cast<unsigned int>(static_cast<int>(f)) & 0x1ffff);
+    unsigned int i(static_cast<int>(f) & 0x1ffff);
 
     return xyzCbrtLookup[i];
   }
@@ -188,6 +188,7 @@ private:
   }
 
   Image::ValueType clamp16(int val) {
+    // Assume right-shift of signed values leaves 1s, not 0s
     const unsigned int trashBits = val >> 16;
     return trashBits ? (~trashBits >> 16) : val;
   }
