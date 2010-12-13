@@ -21,7 +21,7 @@ namespace refinery {
 /**
  * Huffman decoder which reads from an input stream.
  *
- * When using a HuffmanDecoder on an InputStream, do not read from the input
+ * When using a HuffmanDecoder on an input stream, do not read from the input
  * stream as well: if you do, the next time the HuffmanDecoder reads from it
  * the bits will not match up with the earlier ones. Instead, do something like
  * this:
@@ -104,8 +104,8 @@ public:
    * Creates a Huffman decoder stream.
    *
    * initializer is a 32-uchar representation of the Huffman tree. The first
-   * 16 bits specify how many codes should be 1-bit, 2-bit, etc; the last 16
-   * bits are the values.
+   * 16 bytes specify how many codes should be 1-bit, 2-bit, etc; the last 16
+   * bytes are the values.
    *
    * For example, if the source is
    *
@@ -157,7 +157,7 @@ public:
 
   uint16_t nextBitsValue(unsigned int nBits)
   {
-    uint16_t value = getBits(nBits); // works with nBits = 0, no branch
+    uint16_t value = getBits(nBits); // works with nBits = 0, returns 0
 
     mBufferLength -= nBits;
 
