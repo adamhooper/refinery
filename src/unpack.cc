@@ -3,7 +3,6 @@
 #include "refinery/image.h"
 #include "refinery/input.h"
 
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
