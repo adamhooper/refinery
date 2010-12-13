@@ -1,4 +1,4 @@
-CXXFLAGS=-Iinclude -g -Wall -fPIC
+CXXFLAGS=-Iinclude -g -Wall -fPIC -fopenmp
 CXX=g++
 
 all: obj/librefinery.so bin/raw2ppm

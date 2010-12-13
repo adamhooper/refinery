@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "refinery/image.h"
+#include "refinery/image_tile.h"
 
 namespace refinery {
 
@@ -22,93 +23,6 @@ static const float RgbCam[3][4] = { // FIXME: not const!
 
 static const float D65White[3] = { 0.950456, 1, 1.088754 };
 
-template<typename T, std::size_t N = 3> class TypedImageTile {
-public:
-  typedef TypedImage<T,N> ImageType;
-  typedef typename ImageType::ValueType ValueType;
-  typedef ValueType (*PixelsType)[N];
-  typedef const ValueType (*ConstPixelsType)[N];
-
-private:
-  typedef std::vector<ValueType> StorageType;
-  Point mImageSize;
-  Point mTopLeft;
-  Point mSize;
-  unsigned int mEdgeSize;
-  StorageType mPixels;
-
-  void allocate()
-  {
-    mPixels.assign(mSize.row * mSize.col * N, 0);
-  }
-
-  ptrdiff_t offsetForImagePoint(const Point& imagePoint) const
-  {
-    Point tilePoint(imagePoint - mTopLeft);
-    return (tilePoint.row * mSize.col + tilePoint.col) * N;
-  }
-
-public:
-  TypedImageTile(
-      const Point& imageSize, const Point& topLeft, const Point& size,
-      unsigned int border, unsigned int margin)
-    : mImageSize(imageSize), mTopLeft(topLeft), mSize(size),
-      mEdgeSize(static_cast<unsigned int>(border - margin))
-  {
-    this->allocate();
-  }
-
-  unsigned int top() const {
-    return std::max<unsigned int>(mTopLeft.row, mEdgeSize);
-  }
-  unsigned int left() const {
-    return std::max<unsigned int>(mTopLeft.col, mEdgeSize);
-  }
-  unsigned int height() const {
-    return mSize.row;
-  }
-  unsigned int width() const {
-    return mSize.col;
-  }
-  unsigned int bottom() const {
-    return std::min<unsigned int>(
-        mImageSize.row - mEdgeSize,
-        mTopLeft.row + mSize.row);
-  }
-  unsigned int right() const {
-    return std::min<unsigned int>(
-        mImageSize.col - mEdgeSize,
-        mTopLeft.col + mSize.col);
-  }
-
-  void setTopLeft(const Point& topLeft) { mTopLeft = topLeft; }
-  void setSize(int height, int width) {
-    Point newSize(height, width);
-    if (newSize != mSize) {
-      mSize = newSize;
-      this->allocate();
-    }
-  }
-
-  PixelsType pixelsAtImageCoords(const Point& point) {
-    const ptrdiff_t offset(offsetForImagePoint(point));
-    return reinterpret_cast<PixelsType>(&mPixels[offset]);
-  }
-  PixelsType pixelsAtImageCoords(int row, int col) {
-    return pixelsAtImageCoords(Point(row, col));
-  }
-  ConstPixelsType constPixelsAtImageCoords(const Point& point) const {
-    const ptrdiff_t offset(offsetForImagePoint(point));
-    return reinterpret_cast<ConstPixelsType>(&mPixels[offset]);
-  }
-  ConstPixelsType constPixelsAtImageCoords(int row, int col) const {
-    return constPixelsAtImageCoords(Point(row, col));
-  }
-};
-
-typedef TypedImageTile<unsigned short, 3> RGBImageTile;
-typedef RGBImageTile ImageTile;
-typedef TypedImageTile<short, 3> LABImageTile;
 typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
 
 static std::vector<float> xyzCbrtLookup; // FIXME make singleton
@@ -635,40 +549,45 @@ public:
     const unsigned int right = width - border;
 
     Point imageSize(height, width);
-    Point tileTopLeft(border - margin, border - margin);
     Point tileSize(tileHeight, tileWidth);
 
-    ImageTile hImageTile(imageSize, tileTopLeft, tileSize, border, margin);
-    ImageTile vImageTile(imageSize, tileTopLeft, tileSize, border, margin);
-    LABImageTile hLabImageTile(
-        imageSize, tileTopLeft, tileSize, border, margin);
-    LABImageTile vLabImageTile(
-        imageSize, tileTopLeft, tileSize, border, margin);
-    HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize, border, margin);
+#pragma omp parallel
+    {
+      Point tileTopLeft(border - margin, border - margin);
 
-    for (unsigned int row = top; row < bottom; row += tileHeight - 2*margin) {
-      tileTopLeft.row = row;
+      ImageTile hImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+      ImageTile vImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+      LABImageTile hLabImageTile(
+          imageSize, tileTopLeft, tileSize, border, margin);
+      LABImageTile vLabImageTile(
+          imageSize, tileTopLeft, tileSize, border, margin);
+      HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize, border, margin);
 
-      for (unsigned int col = left; col < right; col += tileWidth - 2*margin) {
-        tileTopLeft.col = col;
+#pragma omp for schedule(dynamic)
+      for (unsigned int row = top; row < bottom; row += tileHeight - 2*margin) {
+        tileTopLeft.row = row;
 
-        hImageTile.setTopLeft(tileTopLeft);
-        vImageTile.setTopLeft(tileTopLeft);
-        hLabImageTile.setTopLeft(tileTopLeft);
-        vLabImageTile.setTopLeft(tileTopLeft);
-        homoTile.setTopLeft(tileTopLeft);
+        for (unsigned int col = left; col < right; col += tileWidth - 2*margin) {
+          tileTopLeft.col = col;
 
-        createGreenDirectionalImages(image, hImageTile, vImageTile);
+          hImageTile.setTopLeft(tileTopLeft);
+          vImageTile.setTopLeft(tileTopLeft);
+          hLabImageTile.setTopLeft(tileTopLeft);
+          vLabImageTile.setTopLeft(tileTopLeft);
+          homoTile.setTopLeft(tileTopLeft);
 
-        fillDirectionalImage(image, hImageTile);
-        fillDirectionalImage(image, vImageTile);
+          createGreenDirectionalImages(image, hImageTile, vImageTile);
 
-        createCielabImage(hImageTile, hLabImageTile, xyzCam);
-        createCielabImage(vImageTile, vLabImageTile, xyzCam);
+          fillDirectionalImage(image, hImageTile);
+          fillDirectionalImage(image, vImageTile);
 
-        fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
+          createCielabImage(hImageTile, hLabImageTile, xyzCam);
+          createCielabImage(vImageTile, vLabImageTile, xyzCam);
 
-        refillImage(image, hImageTile, vImageTile, homoTile);
+          fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
+
+          refillImage(image, hImageTile, vImageTile, homoTile);
+        }
       }
     }
   }
