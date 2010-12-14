@@ -23,7 +23,6 @@ namespace {
     void filter() {
       Camera::ColorConversionData colorData(mCameraData.colorConversionData());
 
-      const double* scaling(colorData.scalingMultipliers);
       const unsigned int height(mImage.height());
       const unsigned int width(mImage.width());
 
