@@ -1,5 +1,6 @@
 #include "refinery/camera.h"
 
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -624,7 +625,7 @@ namespace CameraModels {
       const char* aName = this->name();
 
       bool fail = true;
-      for (int i = 0; i < sizeof(table) / sizeof(table[0]); i++) {
+      for (unsigned int i = 0; i < sizeof(table) / sizeof(table[0]); i++) {
         if (!strcmp(aName, table[i].model)) {
           fail = false;
           ret.black = table[i].black;
@@ -657,18 +658,33 @@ namespace CameraModels {
         for (int j = 0; j < 3; j++) {
           ret.cameraToRgb[i][j] /= sum;
         }
-        ret.scalingMultipliers[i] = 1 / sum;
+        ret.cameraMultipliers[i] = 1 / sum;
       }
 
+      // set scalingMultipliers, adjust cameraMultipliers
+      double cameraMultipliersMin = std::numeric_limits<double>::max();
+      for (int i = 0; i < aColors; i++) {
+        if (cameraMultipliersMin > ret.cameraMultipliers[i]) {
+          cameraMultipliersMin = ret.cameraMultipliers[i];
+        }
+      }
+      for (int i = 0; i < aColors; i++) {
+        ret.cameraMultipliers[i] =
+            ret.cameraMultipliers[i] / cameraMultipliersMin;
+        ret.scalingMultipliers[i] =
+            ret.cameraMultipliers[i] * 65535.0 / ret.maximum;
+      }
+
+      // set rgbToCamera
       double inverse[4][3];
       dcraw_pseudoinverse(ret.cameraToRgb, inverse, aColors);
-
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < aColors; j++) {
           ret.rgbToCamera[i][j] = inverse[j][i];
         }
       }
 
+      // set xyzToCamera
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < aColors; j++) {
           ret.xyzToCamera[i][j] = 0;

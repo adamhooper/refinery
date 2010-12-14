@@ -30,6 +30,7 @@ public:
     double cameraToRgb[4][3];
     double rgbToCamera[3][4];
     double xyzToCamera[3][4];
+    double cameraMultipliers[4];
     double scalingMultipliers[4];
   };
 
