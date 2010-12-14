@@ -1,10 +1,14 @@
 #include <gtest/gtest.h>
+
 #include <iostream>
 #include <fstream>
 
 #include "refinery/interpolate.h"
 
+#include "refinery/camera.h"
 #include "refinery/image.h"
+
+#include <exiv2/exif.hpp>
 
 namespace {
 
@@ -14,7 +18,13 @@ class InterpolatorTest : public ::testing::Test {
 #include "files/nikon_d5000_225x75_sample.h"
 
 TEST(InterpolatorTest, AHDInterpolate) {
-  refinery::Image image(225, 75);
+  Exiv2::ExifData exifData;
+  exifData["Exif.Image.Model"] = "NIKON D5000";
+
+  refinery::CameraData cameraData(
+      refinery::CameraDataFactory::instance().getCameraData(exifData));
+
+  refinery::Image image(cameraData, 225, 75);
   image.setBytesPerPixel(3);
   image.setFilters(0x61616161);
   image.pixels().assign(
@@ -23,7 +33,7 @@ TEST(InterpolatorTest, AHDInterpolate) {
   refinery::Interpolator interpolator(refinery::Interpolator::INTERPOLATE_AHD);
   interpolator.interpolate(image);
 
-  refinery::Image ref(225, 75);
+  refinery::Image ref(cameraData, 225, 75);
   ref.setBytesPerPixel(3);
   refinery::Image::PixelsType& pixels(ref.pixels());
   pixels.assign(ref.width() * ref.height() * ref.bytesPerPixel(), 0);

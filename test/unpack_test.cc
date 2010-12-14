@@ -5,9 +5,8 @@
 #include <fstream>
 #include <memory>
 
-#include <exiv2/exif.hpp>
 #include <exiv2/image.hpp>
-#include <exiv2/tags.hpp>
+#include <exiv2/exif.hpp>
 
 #include "refinery/image.h"
 
@@ -34,7 +33,7 @@ TEST(ImageReaderTest, NikonD5000) {
   refinery::ImageReader reader;
 
   std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, mimeType, width, height, &exifData));
+      reader.readImage(fb, mimeType, width, height, exifData));
   refinery::Image& image(*imagePtr);
 
   EXPECT_EQ(6, image.bytesPerPixel());
@@ -83,8 +82,9 @@ TEST(ImageReaderTest, Ppm16Bit) {
 
   refinery::ImageReader reader;
 
+  Exiv2::ExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, "image/x-portable-pixmap"));
+      reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);
 
   EXPECT_EQ(101266, fb.pubseekoff(0, std::ios::cur));

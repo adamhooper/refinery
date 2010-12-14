@@ -4,24 +4,11 @@
 #include <cmath>
 #include <limits>
 
+#include "refinery/camera.h"
 #include "refinery/image.h"
 #include "refinery/image_tile.h"
 
 namespace refinery {
-
-static const float XyzRgb[3][3] = {
-  { 0.412453, 0.357580, 0.180423 },
-  { 0.212671, 0.715160, 0.072169 },
-  { 0.019334, 0.119193, 0.950227 }
-};
-
-static const float RgbCam[3][4] = { // FIXME: not const!
-  { 1.826925, -0.654972, -0.171953, 0 },
-  { -0.006813, 1.332168, -0.325355, 0 },
-  { 0.062587, -0.400578, 1.337991, 0 }
-};
-
-static const float D65White[3] = { 0.950456, 1, 1.088754 };
 
 typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
 
@@ -324,29 +311,29 @@ private:
 
   void rgbToLab(
       const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
-      const float (&xyzCam)[3][3])
+      const float (&xyzToCamera)[3][4])
   {
-    float x = xyz64Cbrt(0.5f
-        + xyzCam[X][R] * rgb[R]
-        + xyzCam[X][G] * rgb[G]
-        + xyzCam[X][B] * rgb[B]);
-    float y = xyz64Cbrt(0.5f
-        + xyzCam[Y][R] * rgb[R]
-        + xyzCam[Y][G] * rgb[G]
-        + xyzCam[Y][B] * rgb[B]);
-    float z = xyz64Cbrt(0.5f
-        + xyzCam[Z][R] * rgb[R]
-        + xyzCam[Z][G] * rgb[G]
-        + xyzCam[Z][B] * rgb[B]);
+    float cbrtX = xyz64Cbrt(0.5f
+        + xyzToCamera[X][R] * rgb[R]
+        + xyzToCamera[X][G] * rgb[G]
+        + xyzToCamera[X][B] * rgb[B]);
+    float cbrtY = xyz64Cbrt(0.5f
+        + xyzToCamera[Y][R] * rgb[R]
+        + xyzToCamera[Y][G] * rgb[G]
+        + xyzToCamera[Y][B] * rgb[B]);
+    float cbrtZ = xyz64Cbrt(0.5f
+        + xyzToCamera[Z][R] * rgb[R]
+        + xyzToCamera[Z][G] * rgb[G]
+        + xyzToCamera[Z][B] * rgb[B]);
 
-    lab[L] = static_cast<LABImage::ValueType>(116.0f * y - (64.0f*16.0f));
-    lab[A] = static_cast<LABImage::ValueType>(500.0f * (x - y));
-    lab[B] = static_cast<LABImage::ValueType>(200.0f * (y - z));
+    lab[L] = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
+    lab[A] = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
+    lab[B] = static_cast<LABImage::ValueType>(200.0f * (cbrtY - cbrtZ));
   }
 
   void createCielabImage(
       const ImageTile& imageTile, LABImageTile& labImageTile,
-      const float (&xyzCam)[3][3])
+      const float (&xyzToCamera)[3][4])
   {
     const unsigned int top = imageTile.top() + 1;
     const unsigned int left = imageTile.left() + 1;
@@ -361,7 +348,7 @@ private:
           &labImageTile.pixelsAtImageCoords(row, left)[0]);
 
       for (unsigned int col = left; col < right; col++) {
-        rgbToLab(pix[0], lPix[0], xyzCam);
+        rgbToLab(pix[0], lPix[0], xyzToCamera);
         pix++;
         lPix++;
       }
@@ -516,24 +503,19 @@ private:
     }
   }
 
-  void fillXyzCam(const Image& image, float (&xyzCam)[3][3])
-  {
-    // FIXME pass RgbCam through Image
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        for (int k = xyzCam[i][j] = 0; k < 3; k++) {
-          xyzCam[i][j] += XyzRgb[i][k] * RgbCam[k][j] / D65White[i];
-        }
-      }
-    }
-  }
-
 public:
   void interpolate(Image& image) {
     const unsigned int border = 5;
 
-    float xyzCam[3][3];
-    fillXyzCam(image, xyzCam);
+    const Camera::ColorConversionData colorData(
+        image.cameraData().colorConversionData());
+    float xyzToCamera[3][4];
+    for (unsigned int i = 0; i < 3; i++) {
+      for (unsigned int j = 0; j < image.cameraData().colors(); j++) {
+        // convert from double to float, for speed
+        xyzToCamera[i][j] = colorData.xyzToCamera[i][j];
+      }
+    }
 
     interpolateBorder(image, border);
 
@@ -582,8 +564,8 @@ public:
           fillDirectionalImage(image, hImageTile);
           fillDirectionalImage(image, vImageTile);
 
-          createCielabImage(hImageTile, hLabImageTile, xyzCam);
-          createCielabImage(vImageTile, vLabImageTile, xyzCam);
+          createCielabImage(hImageTile, hLabImageTile, xyzToCamera);
+          createCielabImage(vImageTile, vLabImageTile, xyzToCamera);
 
           fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
 

@@ -22,7 +22,7 @@ namespace unpack {
   public:
     virtual Image* unpackImage(
         std::streambuf& is, int width, int height,
-        const ExifData* exifData) = 0;
+        const ExifData& exifData) = 0;
   };
 
   class PpmUnpacker : public Unpacker {
@@ -78,9 +78,13 @@ namespace unpack {
 
   public:
     virtual Image* unpackImage(
-        std::streambuf& is, int width, int height, const ExifData* exifData)
+        std::streambuf& is, int width, int height, const ExifData& exifData)
     {
-      std::auto_ptr<Image> image(new Image(width, height));
+      // This will give a NullCamera
+      CameraData cameraData(
+          CameraDataFactory::instance().getCameraData(exifData));
+
+      std::auto_ptr<Image> image(new Image(cameraData, width, height));
 
       unpackHeader(is, *image);
 
@@ -303,9 +307,10 @@ namespace unpack {
 
   public:
     virtual Image* unpackImage(
-        std::streambuf& is, int width, int height, const ExifData* exifDataPtr)
+        std::streambuf& is, int width, int height, const ExifData& exifData)
     {
-      const ExifData& exifData(*exifDataPtr);
+      CameraData cameraData(
+          CameraDataFactory::instance().getCameraData(exifData));
 
       int bitsPerSample = getBitsPerSample(exifData);
 
@@ -326,7 +331,7 @@ namespace unpack {
 
       is.pubseekoff(getDataOffset(exifData), std::ios::beg);
 
-      std::auto_ptr<Image> imagePtr(new Image(width, height));
+      std::auto_ptr<Image> imagePtr(new Image(cameraData, width, height));
       Image& image(*imagePtr);
 
       image.setFilters(filters);
@@ -394,7 +399,7 @@ namespace unpack {
   class UnpackerFactory {
   public:
     static Unpacker* createUnpacker(
-        const char* mimeType, const ExifData* exifData)
+        const char* mimeType, const ExifData& exifData)
     {
       std::string sMimeType(mimeType);
 
@@ -413,7 +418,7 @@ namespace unpack {
 
 Image* ImageReader::readImage(
     std::streambuf& istream, const char* mimeType,
-    int width, int height, const Exiv2::ExifData* exifData)
+    int width, int height, const Exiv2::ExifData& exifData)
 {
   std::auto_ptr<unpack::Unpacker> unpacker(
       unpack::UnpackerFactory::createUnpacker(mimeType, exifData));

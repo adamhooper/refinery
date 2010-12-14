@@ -4,7 +4,7 @@ project(refinery)
 cmake_minimum_required(VERSION 2.8.2)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_CXX_FLAGS "-fopenmp")
+#set(CMAKE_CXX_FLAGS "-fopenmp")
 endif()
 
 include_directories(${refinery_SOURCE_DIR}/include)
@@ -12,7 +12,7 @@ include_directories(${refinery_SOURCE_DIR}/include)
 pkg_check_modules(EXIV2 REQUIRED exiv2>=0.20)
 include_directories(SYSTEM ${EXIV2_INCLUDE_DIRS})
 
-add_library(refinery-0.1 SHARED src/image.cc src/input.cc src/interpolate.cc src/output.cc src/unpack.cc)
+add_library(refinery-0.1 SHARED src/camera.cc src/filters.cc src/image.cc src/input.cc src/interpolate.cc src/output.cc src/unpack.cc)
 set_target_properties(refinery-0.1 PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 target_link_libraries(refinery-0.1 exiv2)

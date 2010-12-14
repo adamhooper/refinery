@@ -1,3 +1,4 @@
+#include "refinery/filters.h"
 #include "refinery/image.h"
 #include "refinery/interpolate.h"
 #include "refinery/output.h"
@@ -40,8 +41,11 @@ int main(int argc, char **argv)
   const char* mimeType = exivImage->mimeType().c_str();
 
   std::auto_ptr<Image> imagePtr(
-      reader.readImage(fb, mimeType, width, height, &exifData));
+      reader.readImage(fb, mimeType, width, height, exifData));
   Image& image(*imagePtr);
+
+  ScaleColorsFilter filter;
+  filter.filter(image);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);
   interpolator.interpolate(image);

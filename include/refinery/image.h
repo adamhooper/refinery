@@ -1,10 +1,14 @@
 #ifndef _REFINERY_IMAGE_H
 #define _REFINERY_IMAGE_H
 
+#include <refinery/camera.h>
+
 #include <cstddef>
 #include <vector>
 
 namespace refinery {
+
+class CameraData;
 
 struct Point {
   /* Starting at top-left */
@@ -47,6 +51,7 @@ public:
   static const Color B = 2;
 
 private:
+  CameraData mCameraData;
   int mWidth;
   int mHeight;
   int mBpp; /* bytes per pixel */
@@ -54,9 +59,13 @@ private:
   PixelsType mPixels;
 
 public:
-  TypedImage(int width = 0, int height = 0)
-    : mWidth(width), mHeight(height), mBpp(0), mFilters(0) {}
+  TypedImage(const CameraData& cameraData, int width = 0, int height = 0)
+    : mCameraData(cameraData), mWidth(width), mHeight(height), mBpp(0),
+    mFilters(0)
+  {
+  }
 
+  const CameraData& cameraData() const { return mCameraData; }
   int width() const { return mWidth; }
   int height() const { return mHeight; }
   int bytesPerPixel() const { return mBpp; }

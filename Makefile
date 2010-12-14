@@ -185,6 +185,54 @@ test/gtest_main/fast:
 	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/build
 .PHONY : test/gtest_main/fast
 
+src/camera.o: src/camera.cc.o
+.PHONY : src/camera.o
+
+# target to build an object file
+src/camera.cc.o:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/camera.cc.o
+.PHONY : src/camera.cc.o
+
+src/camera.i: src/camera.cc.i
+.PHONY : src/camera.i
+
+# target to preprocess a source file
+src/camera.cc.i:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/camera.cc.i
+.PHONY : src/camera.cc.i
+
+src/camera.s: src/camera.cc.s
+.PHONY : src/camera.s
+
+# target to generate assembly for a file
+src/camera.cc.s:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/camera.cc.s
+.PHONY : src/camera.cc.s
+
+src/filters.o: src/filters.cc.o
+.PHONY : src/filters.o
+
+# target to build an object file
+src/filters.cc.o:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/filters.cc.o
+.PHONY : src/filters.cc.o
+
+src/filters.i: src/filters.cc.i
+.PHONY : src/filters.i
+
+# target to preprocess a source file
+src/filters.cc.i:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/filters.cc.i
+.PHONY : src/filters.cc.i
+
+src/filters.s: src/filters.cc.s
+.PHONY : src/filters.s
+
+# target to generate assembly for a file
+src/filters.cc.s:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/filters.cc.s
+.PHONY : src/filters.cc.s
+
 src/image.o: src/image.cc.o
 .PHONY : src/image.o
 
@@ -465,6 +513,12 @@ help:
 	@echo "... refinery-0.1"
 	@echo "... test"
 	@echo "... test/gtest_main"
+	@echo "... src/camera.o"
+	@echo "... src/camera.i"
+	@echo "... src/camera.s"
+	@echo "... src/filters.o"
+	@echo "... src/filters.i"
+	@echo "... src/filters.s"
 	@echo "... src/image.o"
 	@echo "... src/image.i"
 	@echo "... src/image.s"

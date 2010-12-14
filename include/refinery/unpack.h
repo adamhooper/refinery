@@ -21,13 +21,14 @@ public:
    * When reading is done, the stream will be seeked one byte past the last
    * byte in the image.
    *
-   * Depending on mimeType, width/height/exifData may be needed. The rule of
-   * thumb: you don't need them for image/x-portable-pixmap but you need it for
-   * everything else. (You can read width and height from an Exiv2::ExifImage.)
+   * With most image types, you can read with and height using an
+   * Exiv2::ExifImage. A notable exception is PPM: if you read an
+   * image/x-portable-pixmap file the width and height will be ignored. You
+   * must still pass in an Exiv2::ExifData& though.
    */
   Image* readImage(
       std::streambuf& istream, const char* mimeType,
-      int width = 0, int height = 0, const Exiv2::ExifData* exifData = 0);
+      int width, int height, const Exiv2::ExifData& exifData);
 };
 
 }
