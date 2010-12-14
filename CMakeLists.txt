@@ -4,7 +4,7 @@ project(refinery)
 cmake_minimum_required(VERSION 2.8.2)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-#set(CMAKE_CXX_FLAGS "-fopenmp")
+  set(CMAKE_CXX_FLAGS "-fopenmp")
 endif()
 
 include_directories(${refinery_SOURCE_DIR}/include)
