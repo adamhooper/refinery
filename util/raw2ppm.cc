@@ -44,11 +44,14 @@ int main(int argc, char **argv)
       reader.readImage(fb, mimeType, width, height, exifData));
   Image& image(*imagePtr);
 
-  ScaleColorsFilter filter;
-  filter.filter(image);
+  ScaleColorsFilter scaleFilter;
+  scaleFilter.filter(image);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);
   interpolator.interpolate(image);
+
+  ConvertToRgbFilter rgbFilter;
+  rgbFilter.filter(image);
 
   std::ofstream out(argv[2], std::ios::binary | std::ios::out);
 

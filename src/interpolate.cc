@@ -200,13 +200,13 @@ private:
       ImageTile::ConstPixelsType& dPixAbove,
       ImageTile::ConstPixelsType& dPixBelow)
   {
-    const Image::ValueType colCValue =
+    const int colCValue =
         pix[0][G] +
         ((pixAbove[0][colC] + pixBelow[0][colC]
           - dPixAbove[0][G] - dPixBelow[0][G]) >> 1);
     dPix[0][colC] = clamp16(colCValue);
 
-    const Image::ValueType rowCValue =
+    const int rowCValue =
         pix[0][G] +
         ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
           >> 1);
@@ -220,7 +220,7 @@ private:
       ImageTile::ConstPixelsType& dPixAbove,
       ImageTile::ConstPixelsType& dPixBelow)
   {
-    const Image::ValueType colCValue =
+    const int colCValue =
         dPix[0][G] +
         ((pixAbove[-1][colC] + pixAbove[1][colC]
           + pixBelow[-1][colC] + pixBelow[1][colC]
@@ -431,7 +431,7 @@ private:
              */
             homogeneity += (
                 ((lDiff[dir][adjDir] - lEps) & (abDiff[dir][adjDir] - abEps))
-                >> (sizeof(homogeneity) * 8 - 1));
+                >> (sizeof(lEps) * 8 - 1));
 #endif
           }
 

@@ -102,10 +102,16 @@ public:
     int col = point.col;
     return &mPixels[(row * mWidth + col) * N];
   }
+  PixelType pixel(unsigned int row, unsigned int col) {
+    return pixel(Point(row, col));
+  }
   ConstPixelType constPixel(const Point& point) const {
     int row = point.row;
     int col = point.col;
     return &mPixels[(row * mWidth + col) * N];
+  }
+  ConstPixelType constPixel(unsigned int row, unsigned int col) const {
+    return constPixel(Point(row, col));
   }
 };
 

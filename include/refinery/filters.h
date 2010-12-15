@@ -13,6 +13,11 @@ public:
   void filter(Image& image);
 };
 
+class ConvertToRgbFilter {
+public:
+  void filter(Image& image);
+};
+
 } // namespace refinery
 
 #endif /* REFINERY_FILTERS_H */
