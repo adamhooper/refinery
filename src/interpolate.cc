@@ -10,13 +10,157 @@
 
 namespace refinery {
 
-typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
+namespace {
+  void interpolateBorder(Image& image, int border) {
+    typedef Image::Color Color;
 
-static std::vector<float> xyzCbrtLookup; // FIXME make singleton
+    const int width = image.width(), height = image.height();
+    const int top = 0, left = 0, right = width, bottom = height;
+
+    for (int row = top; row < bottom; row++) {
+      for (int col = left; col < right; col++) {
+        if (col == border && row >= border && row < bottom - border) {
+          col = right - border;
+        }
+
+        unsigned int sum[4] = { 0, 0, 0, 0 };
+        unsigned int count[4] = { 0, 0, 0, 0 };
+
+        for (int y = row - 1; y <= row + 1; y++) {
+          if (y < top || y >= bottom) continue;
+
+          for (int x = col - 1; x <= col + 1; x++) {
+            if (x < left || x >= right) continue;
+
+            Point p(y, x);
+            Color c = image.colorAtPoint(p);
+            sum[c] += image.pixel(p)[c];
+            count[c]++;
+          }
+        }
+
+        Point curP(row, col);
+        Color curC = image.colorAtPoint(curP);
+        for (Color c = 0; c < 4; c++) {
+          if (c != curC && count[c]) {
+            image.pixel(curP)[c] = sum[c] / count[c];
+          }
+        }
+      }
+    }
+  }
+} // namespace {}
+
+class BilinearInterpolator {
+  struct PixelInstructions {
+    unsigned int adjacentWeights[8];
+    unsigned int adjacentColors[8];
+    unsigned int otherColors[2];
+    unsigned int divisions[2];
+  };
+
+  class PixelsInstructions {
+    PixelInstructions pixels[16][16];
+
+    public:
+    PixelsInstructions(const Image& image)
+    {
+      for (unsigned int row = 0; row < 16; row++) {
+        for (unsigned int col = 0; col < 16; col++) {
+          PixelInstructions& instructions = pixels[row & 15][col & 15];
+
+          unsigned int sums[3] = { 0, 0, 0 };
+
+          unsigned int adjIndex = 0;
+          for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+              unsigned int shift = (x == 0) + (y == 0);
+              if (shift == 2) continue;
+
+              instructions.adjacentWeights[adjIndex] = shift;
+              unsigned int color = image.colorAtPoint(row + y, col + x);
+              instructions.adjacentColors[adjIndex] = color;
+
+              sums[color] += 1 << shift;
+
+              adjIndex++;
+            }
+          }
+
+          const unsigned int colorAtPixel = image.colorAtPoint(row, col);
+          unsigned int colorIndex = 0;
+          for (unsigned int color = 0; color < 3; color++) {
+            if (color == colorAtPixel) continue;
+
+            instructions.otherColors[colorIndex] = color;
+            instructions.divisions[colorIndex] = 256 / sums[color];
+
+            colorIndex++;
+          }
+        }
+      }
+    }
+
+    const PixelInstructions& getPixelInstructions(
+        unsigned int row, unsigned int col) const
+    {
+      return pixels[row & 15][col & 15];
+    }
+  };
+
+public:
+  void interpolate(Image& image) {
+    interpolateBorder(image, 1);
+
+    const unsigned int width = image.width();
+    const unsigned int height = image.height();
+
+    const unsigned int top = 1;
+    const unsigned int bottom = height - 1;
+    const unsigned int left = 1;
+    const unsigned int right = width - 1;
+
+    const int adjacentOffsets[8] = {
+      -width - 1, -width, -width + 1, -1, 1, width -1 , width, width + 1
+    };
+    const PixelsInstructions pixelsInstructions(image);
+
+    for (unsigned int row = top; row < bottom; row++) {
+      Image::RowType pix(&image.pixelsRow(row)[left]);
+      for (unsigned int col = left; col < right; col++, pix++) {
+        const PixelInstructions& instructions(
+            pixelsInstructions.getPixelInstructions(row, col));
+
+        unsigned int sums[3] = { 0, 0, 0 };
+
+        for (unsigned int adjIndex = 0; adjIndex < 8; adjIndex++) {
+          const int adjOffset = adjacentOffsets[adjIndex];
+          const unsigned int adjWeight = instructions.adjacentWeights[adjIndex];
+          const unsigned int adjColor = instructions.adjacentColors[adjIndex];
+
+          sums[adjColor] +=
+              static_cast<unsigned int>(pix[adjOffset][adjColor]) << adjWeight;
+        }
+
+        for (unsigned int colorIndex = 0; colorIndex < 2; colorIndex++) {
+          const unsigned int color = instructions.otherColors[colorIndex];
+          const unsigned int division = instructions.divisions[colorIndex];
+
+          pix[0][color] =
+              static_cast<Image::ValueType>(sums[color] * division >> 8);
+        }
+      }
+    }
+  }
+};
+
+namespace { std::vector<float> xyzCbrtLookup; } // FIXME make singleton
 
 class AHDInterpolator {
 private:
+
   typedef Image::Color Color;
+  typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
 
   static const Color R = Image::R;
   static const Color G = Image::G;
@@ -62,42 +206,6 @@ public:
   }
 
 private:
-  void interpolateBorder(Image& image, int border) {
-    const int width = image.width(), height = image.height();
-    const int top = 0, left = 0, right = width, bottom = height;
-
-    for (int row = top; row < bottom; row++) {
-      for (int col = left; col < right; col++) {
-        if (col == border && row >= border && row < bottom - border) {
-          col = right - border;
-        }
-
-        unsigned int sum[4] = { 0, 0, 0, 0 };
-        unsigned int count[4] = { 0, 0, 0, 0 };
-
-        for (int y = row - 1; y <= row + 1; y++) {
-          if (y < top || y >= bottom) continue;
-
-          for (int x = col - 1; x <= col + 1; x++) {
-            if (x < left || x >= right) continue;
-
-            Point p(y, x);
-            Color c = image.colorAtPoint(p);
-            sum[c] += image.pixel(p)[c];
-            count[c]++;
-          }
-        }
-
-        Point curP(row, col);
-        Color curC = image.colorAtPoint(curP);
-        for (Color c = 0; c < 4; c++) {
-          if (c != curC && count[c]) {
-            image.pixel(curP)[c] = sum[c] / count[c];
-          }
-        }
-      }
-    }
-  }
 
   /**
    * Returns cbrt(f/65536), unless f is <= 580 in which case it's a linear
@@ -585,8 +693,17 @@ void Interpolator::interpolate(Image& image)
 {
   switch (mType) {
     case INTERPOLATE_AHD:
-      AHDInterpolator ahdInterpolator;
-      ahdInterpolator.interpolate(image);
+      {
+        AHDInterpolator ahdInterpolator;
+        ahdInterpolator.interpolate(image);
+        break;
+      }
+    case INTERPOLATE_BILINEAR:
+      {
+        BilinearInterpolator bilinearInterpolator;
+        bilinearInterpolator.interpolate(image);
+        break;
+      }
   }
 }
 

@@ -11,7 +11,8 @@ typedef TypedImage<unsigned short, 3> Image;
 class Interpolator {
 public:
   enum Type {
-    INTERPOLATE_AHD
+    INTERPOLATE_AHD,
+    INTERPOLATE_BILINEAR
   };
 
 private:

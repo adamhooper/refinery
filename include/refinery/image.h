@@ -86,6 +86,9 @@ public:
     int col = point.col;
     return (mFilters >> (((row << 1 & 14) | (col & 1)) << 1)) & 3;
   }
+  Color colorAtPoint(unsigned int row, unsigned int col) const {
+    return colorAtPoint(Point(row, col));
+  }
 
   const PixelsType& constPixels() const { return mPixels; }
   PixelsType& pixels() { return mPixels; }
