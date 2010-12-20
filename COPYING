@@ -1,0 +1,26 @@
+Most of this code is public-domain: you may do anything you wish with it
+without crediting anybody. (If you do decide to point end-users to
+http://github.com/adamh/refinery, you may benefit if they report bugs.)
+
+BUT WAIT, THERE'S MORE
+
+Some of this code isn't public-domain.
+
+Anything in a "licensed/gpl" subdirectory is GPL code. It can be enabled by
+running "cmake -D LICENSE_GPL=ON ." and it will taint your binaries and
+shared libraries: they'll be GPL as well. Read the entire GPL license at:
+http://www.gnu.org/licenses/gpl.html
+
+This includes:
+
+* include/licensed/gpl
+* src/licensed/gpl
+* test/licensed/gpl (yes, those tests are licensed, too)
+* util/licensed/gpl
+
+The motivation: Exiv2 is a great library for reading Exif data but it's
+licensed under the GPL.
+
+Should you decide to compile the GPL code or use GPL binaries, your license
+is included in the COPYING-GPL file, and the headers of the GPLed files name
+the authors.
