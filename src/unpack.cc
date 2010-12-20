@@ -1,22 +1,16 @@
 #include "refinery/unpack.h"
 
-#include "refinery/image.h"
-#include "refinery/input.h"
-
 #include <memory>
 #include <sstream>
 #include <string>
 
-#include <exiv2/exif.hpp>
-#include <exiv2/tags.hpp>
+#include "refinery/exif.h"
+#include "refinery/image.h"
+#include "refinery/input.h"
 
 namespace refinery {
 
 namespace unpack {
-
-  using Exiv2::ExifData;
-  using Exiv2::ExifKey;
-  using Exiv2::Exifdatum;
 
   class Unpacker {
   public:
@@ -156,15 +150,8 @@ namespace unpack {
 
       void init(const ExifData& exifData, int bitsPerSample)
       {
-        ExifData::const_iterator iterator(
-            exifData.findKey(ExifKey("Exif.Nikon3.LinearizationTable")));
-        if (iterator == exifData.end()) {
-          throw std::string("Exif.Nikon3.LinearizationTable is missing");
-        }
-
-        const Exifdatum& datum(*iterator);
-        std::vector<unsigned char> bytes(datum.size(), 0);
-        datum.copy(&bytes[0], Exiv2::bigEndian);
+        std::vector<unsigned char> bytes;
+        exifData.getBytes("Exif.Nikon3.LinearizationTable", bytes);
 
         version0 = bytes[0];
         version1 = bytes[1];
@@ -199,22 +186,12 @@ namespace unpack {
 
     unsigned int getBitsPerSample(const ExifData& exifData)
     {
-      ExifData::const_iterator iterator(
-          exifData.findKey(ExifKey("Exif.SubImage2.BitsPerSample")));
-      if (iterator == exifData.end()) {
-        throw std::string("Exif.SubImage2.BitsPerSample is missing");
-      }
-      return (*iterator).toLong();
+      return exifData.getInt("Exif.SubImage2.BitsPerSample");
     }
 
     unsigned int getDataOffset(const ExifData& exifData)
     {
-      ExifData::const_iterator iterator(
-          exifData.findKey(ExifKey("Exif.SubImage2.StripOffsets")));
-      if (iterator == exifData.end()) {
-        throw std::string("Exif.SubImage2.StripOffsets is missing");
-      }
-      return (*iterator).toLong();
+      return exifData.getInt("Exif.SubImage2.StripOffsets");
     }
 
     unsigned int getFilters(const ExifData& exifData)
@@ -227,15 +204,8 @@ namespace unpack {
        *   BGBGBGBG...
        *   ...
        */
-      ExifData::const_iterator iterator(
-          exifData.findKey(ExifKey("Exif.SubImage2.CFAPattern")));
-      if (iterator == exifData.end()) {
-        throw std::string("Exif.SubImage2.CFAPattern is missing");
-      }
-      const Exifdatum& datum(*iterator);
-
-      std::vector<unsigned char> bytes(datum.size(), 0);
-      datum.copy(&bytes[0], Exiv2::bigEndian);
+      std::vector<unsigned char> bytes;
+      exifData.getBytes("Exif.SubImage2.CFAPattern", bytes);
 
       // XXX no idea if this is right--just that Nikon D5000 is 0x49494949
       unsigned int filters =
@@ -418,7 +388,7 @@ namespace unpack {
 
 Image* ImageReader::readImage(
     std::streambuf& istream, const char* mimeType,
-    int width, int height, const Exiv2::ExifData& exifData)
+    int width, int height, const ExifData& exifData)
 {
   std::auto_ptr<unpack::Unpacker> unpacker(
       unpack::UnpackerFactory::createUnpacker(mimeType, exifData));

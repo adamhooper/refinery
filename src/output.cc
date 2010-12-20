@@ -192,8 +192,6 @@ class PpmImageWriter {
     for (int row = 0; row < image.height(); row++) {
       Image::ConstRowType pixels(image.constPixelsRow(row));
 
-      std::cout << "image[" << row << "][10]: (" << pixels[10][0] << ", " << pixels[10][1] << ", " << pixels[10][2] << ")" << std::endl;
-
       for (int col = 0; col < image.width(); col++, pixels++) {
         gammaCorrectPixel(pixels[0], rgb, gammaCurve);
         writePixel16Bit(rgb);

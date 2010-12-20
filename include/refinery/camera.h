@@ -1,11 +1,9 @@
 #ifndef _REFINERY_CAMERA_H
 #define _REFINERY_CAMERA_H
 
-namespace Exiv2 {
-  class ExifData;
-}
-
 namespace refinery {
+
+class ExifData;
 
 /*
  * A Camera holds static data for an actual camera model.
@@ -14,7 +12,7 @@ namespace refinery {
  * instance, or different color profiles. Each camera model is represented by
  * a class which derives from Camera.
  *
- * Some Camera methods accept an Exiv2::ExifData& as a parameter. That's
+ * Some Camera methods accept an ExifData& as a parameter. That's
  * because different cameras treat the same Exif tags differently.
  */
 class Camera {
@@ -39,12 +37,12 @@ public:
   virtual const char* model() const = 0;
   virtual unsigned int colors() const = 0;
   virtual ColorConversionData colorConversionData() const = 0;
-  virtual unsigned int orientation(const Exiv2::ExifData& exifData) const = 0;
-  virtual bool canHandle(const Exiv2::ExifData& exifData) const = 0;
+  virtual unsigned int orientation(const ExifData& exifData) const = 0;
+  virtual bool canHandle(const ExifData& exifData) const = 0;
 };
 
 /*
- * A Camera& coupled with an Exiv2::ExifData&.
+ * A Camera& coupled with an ExifData&.
  *
  * This is the public face that callers care about. Callers shouldn't need to
  * know whether a default color profile comes hard-coded or embedded in Exif.
@@ -54,16 +52,16 @@ public:
  */
 class CameraData {
   const Camera& mCamera;
-  const Exiv2::ExifData& mExifData;
+  const ExifData& mExifData;
 
 public:
-  CameraData(const Camera& camera, const Exiv2::ExifData& exifData)
+  CameraData(const Camera& camera, const ExifData& exifData)
       : mCamera(camera), mExifData(exifData) {}
   CameraData(const CameraData& rhs)
       : mCamera(rhs.camera()), mExifData(rhs.exifData()) {}
 
   const Camera& camera() const { return mCamera; }
-  const Exiv2::ExifData& exifData() const { return mExifData; }
+  const ExifData& exifData() const { return mExifData; }
 
   /* Returns the image orientation, a number from 1 to 8 (see TIFF docs) */
   unsigned int orientation() const;
@@ -106,7 +104,7 @@ public:
    * (that is, if a computer program did it), a Camera will still be returned.
    * It's called the NullCamera, and there's nothing special about it.
    */
-  const Camera& detectCamera(const Exiv2::ExifData& exifData) const;
+  const Camera& detectCamera(const ExifData& exifData) const;
 };
 
 /*
@@ -119,7 +117,7 @@ class CameraDataFactory {
 public:
   static CameraDataFactory& instance();
 
-  CameraData getCameraData(const Exiv2::ExifData& exifData) const;
+  CameraData getCameraData(const ExifData& exifData) const;
 };
 
 } // namespace refinery

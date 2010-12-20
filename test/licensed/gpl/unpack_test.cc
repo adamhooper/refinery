@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "refinery/exif.h"
+#include "refinery/exif_exiv2.h"
 #include "refinery/unpack.h"
 
 #include <fstream>
@@ -21,7 +23,8 @@ TEST(ImageReaderTest, NikonD5000) {
   Exiv2::Image::AutoPtr exivImage(Exiv2::ImageFactory::open(path));
 
   exivImage->readMetadata();
-  const Exiv2::ExifData& exifData(exivImage->exifData());
+  Exiv2::ExifData& exiv2ExifData(exivImage->exifData());
+  refinery::Exiv2ExifData exifData(exiv2ExifData);
 
   int width = exivImage->pixelWidth();
   int height = exivImage->pixelHeight();
@@ -82,7 +85,7 @@ TEST(ImageReaderTest, Ppm16Bit) {
 
   refinery::ImageReader reader;
 
-  Exiv2::ExifData exifData;
+  refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
       reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);

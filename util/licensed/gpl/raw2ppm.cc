@@ -1,3 +1,5 @@
+#include "refinery/exif.h"
+#include "refinery/exif_exiv2.h"
 #include "refinery/filters.h"
 #include "refinery/image.h"
 #include "refinery/interpolate.h"
@@ -26,10 +28,12 @@ int main(int argc, char **argv)
   assert(exivImage.get() != 0);
 
   exivImage->readMetadata();
-  const Exiv2::ExifData& exifData(exivImage->exifData());
-  if (exifData.empty()) {
+  Exiv2::ExifData& exiv2ExifData(exivImage->exifData());
+  if (exiv2ExifData.empty()) {
     throw Exiv2::Error(1, std::string(argv[1]) + " is missing Exif data");
   }
+
+  Exiv2ExifData exifData(exiv2ExifData);
 
   std::filebuf fb;
   fb.open(argv[1], std::ios::in | std::ios::binary);

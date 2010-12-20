@@ -35,6 +35,9 @@ CMAKE_COMMAND = /usr/bin/cmake
 # The command to remove a file.
 RM = /usr/bin/cmake -E remove -f
 
+# The program to use to edit the cache.
+CMAKE_EDIT_COMMAND = /usr/bin/ccmake
+
 # The top-level source directory on which CMake was run.
 CMAKE_SOURCE_DIR = /home/adam/src/refinery
 
@@ -46,8 +49,8 @@ CMAKE_BINARY_DIR = /home/adam/src/refinery
 
 # Special rule for the target edit_cache
 edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running interactive CMake command-line interface..."
-	/usr/bin/cmake -i .
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
+	/usr/bin/ccmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -209,6 +212,30 @@ src/camera.cc.s:
 	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/camera.cc.s
 .PHONY : src/camera.cc.s
 
+src/exif.o: src/exif.cc.o
+.PHONY : src/exif.o
+
+# target to build an object file
+src/exif.cc.o:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/exif.cc.o
+.PHONY : src/exif.cc.o
+
+src/exif.i: src/exif.cc.i
+.PHONY : src/exif.i
+
+# target to preprocess a source file
+src/exif.cc.i:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/exif.cc.i
+.PHONY : src/exif.cc.i
+
+src/exif.s: src/exif.cc.s
+.PHONY : src/exif.s
+
+# target to generate assembly for a file
+src/exif.cc.s:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/exif.cc.s
+.PHONY : src/exif.cc.s
+
 src/filters.o: src/filters.cc.o
 .PHONY : src/filters.o
 
@@ -304,6 +331,30 @@ src/interpolate.s: src/interpolate.cc.s
 src/interpolate.cc.s:
 	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/interpolate.cc.s
 .PHONY : src/interpolate.cc.s
+
+src/licensed/gpl/exif_exiv2.o: src/licensed/gpl/exif_exiv2.cc.o
+.PHONY : src/licensed/gpl/exif_exiv2.o
+
+# target to build an object file
+src/licensed/gpl/exif_exiv2.cc.o:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/licensed/gpl/exif_exiv2.cc.o
+.PHONY : src/licensed/gpl/exif_exiv2.cc.o
+
+src/licensed/gpl/exif_exiv2.i: src/licensed/gpl/exif_exiv2.cc.i
+.PHONY : src/licensed/gpl/exif_exiv2.i
+
+# target to preprocess a source file
+src/licensed/gpl/exif_exiv2.cc.i:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/licensed/gpl/exif_exiv2.cc.i
+.PHONY : src/licensed/gpl/exif_exiv2.cc.i
+
+src/licensed/gpl/exif_exiv2.s: src/licensed/gpl/exif_exiv2.cc.s
+.PHONY : src/licensed/gpl/exif_exiv2.s
+
+# target to generate assembly for a file
+src/licensed/gpl/exif_exiv2.cc.s:
+	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/licensed/gpl/exif_exiv2.cc.s
+.PHONY : src/licensed/gpl/exif_exiv2.cc.s
 
 src/output.o: src/output.cc.o
 .PHONY : src/output.o
@@ -425,6 +476,30 @@ test/interpolate_test.cc.s:
 	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/interpolate_test.cc.s
 .PHONY : test/interpolate_test.cc.s
 
+test/licensed/gpl/unpack_test.o: test/licensed/gpl/unpack_test.cc.o
+.PHONY : test/licensed/gpl/unpack_test.o
+
+# target to build an object file
+test/licensed/gpl/unpack_test.cc.o:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/licensed/gpl/unpack_test.cc.o
+.PHONY : test/licensed/gpl/unpack_test.cc.o
+
+test/licensed/gpl/unpack_test.i: test/licensed/gpl/unpack_test.cc.i
+.PHONY : test/licensed/gpl/unpack_test.i
+
+# target to preprocess a source file
+test/licensed/gpl/unpack_test.cc.i:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/licensed/gpl/unpack_test.cc.i
+.PHONY : test/licensed/gpl/unpack_test.cc.i
+
+test/licensed/gpl/unpack_test.s: test/licensed/gpl/unpack_test.cc.s
+.PHONY : test/licensed/gpl/unpack_test.s
+
+# target to generate assembly for a file
+test/licensed/gpl/unpack_test.cc.s:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/licensed/gpl/unpack_test.cc.s
+.PHONY : test/licensed/gpl/unpack_test.cc.s
+
 test/output_test.o: test/output_test.cc.o
 .PHONY : test/output_test.o
 
@@ -449,53 +524,29 @@ test/output_test.cc.s:
 	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/output_test.cc.s
 .PHONY : test/output_test.cc.s
 
-test/unpack_test.o: test/unpack_test.cc.o
-.PHONY : test/unpack_test.o
+util/licensed/gpl/raw2ppm.o: util/licensed/gpl/raw2ppm.cc.o
+.PHONY : util/licensed/gpl/raw2ppm.o
 
 # target to build an object file
-test/unpack_test.cc.o:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/unpack_test.cc.o
-.PHONY : test/unpack_test.cc.o
+util/licensed/gpl/raw2ppm.cc.o:
+	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/licensed/gpl/raw2ppm.cc.o
+.PHONY : util/licensed/gpl/raw2ppm.cc.o
 
-test/unpack_test.i: test/unpack_test.cc.i
-.PHONY : test/unpack_test.i
-
-# target to preprocess a source file
-test/unpack_test.cc.i:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/unpack_test.cc.i
-.PHONY : test/unpack_test.cc.i
-
-test/unpack_test.s: test/unpack_test.cc.s
-.PHONY : test/unpack_test.s
-
-# target to generate assembly for a file
-test/unpack_test.cc.s:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/unpack_test.cc.s
-.PHONY : test/unpack_test.cc.s
-
-util/raw2ppm.o: util/raw2ppm.cc.o
-.PHONY : util/raw2ppm.o
-
-# target to build an object file
-util/raw2ppm.cc.o:
-	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/raw2ppm.cc.o
-.PHONY : util/raw2ppm.cc.o
-
-util/raw2ppm.i: util/raw2ppm.cc.i
-.PHONY : util/raw2ppm.i
+util/licensed/gpl/raw2ppm.i: util/licensed/gpl/raw2ppm.cc.i
+.PHONY : util/licensed/gpl/raw2ppm.i
 
 # target to preprocess a source file
-util/raw2ppm.cc.i:
-	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/raw2ppm.cc.i
-.PHONY : util/raw2ppm.cc.i
+util/licensed/gpl/raw2ppm.cc.i:
+	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/licensed/gpl/raw2ppm.cc.i
+.PHONY : util/licensed/gpl/raw2ppm.cc.i
 
-util/raw2ppm.s: util/raw2ppm.cc.s
-.PHONY : util/raw2ppm.s
+util/licensed/gpl/raw2ppm.s: util/licensed/gpl/raw2ppm.cc.s
+.PHONY : util/licensed/gpl/raw2ppm.s
 
 # target to generate assembly for a file
-util/raw2ppm.cc.s:
-	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/raw2ppm.cc.s
-.PHONY : util/raw2ppm.cc.s
+util/licensed/gpl/raw2ppm.cc.s:
+	$(MAKE) -f CMakeFiles/bin/raw2ppm.dir/build.make CMakeFiles/bin/raw2ppm.dir/util/licensed/gpl/raw2ppm.cc.s
+.PHONY : util/licensed/gpl/raw2ppm.cc.s
 
 # Help Target
 help:
@@ -516,6 +567,9 @@ help:
 	@echo "... src/camera.o"
 	@echo "... src/camera.i"
 	@echo "... src/camera.s"
+	@echo "... src/exif.o"
+	@echo "... src/exif.i"
+	@echo "... src/exif.s"
 	@echo "... src/filters.o"
 	@echo "... src/filters.i"
 	@echo "... src/filters.s"
@@ -528,6 +582,9 @@ help:
 	@echo "... src/interpolate.o"
 	@echo "... src/interpolate.i"
 	@echo "... src/interpolate.s"
+	@echo "... src/licensed/gpl/exif_exiv2.o"
+	@echo "... src/licensed/gpl/exif_exiv2.i"
+	@echo "... src/licensed/gpl/exif_exiv2.s"
 	@echo "... src/output.o"
 	@echo "... src/output.i"
 	@echo "... src/output.s"
@@ -543,15 +600,15 @@ help:
 	@echo "... test/interpolate_test.o"
 	@echo "... test/interpolate_test.i"
 	@echo "... test/interpolate_test.s"
+	@echo "... test/licensed/gpl/unpack_test.o"
+	@echo "... test/licensed/gpl/unpack_test.i"
+	@echo "... test/licensed/gpl/unpack_test.s"
 	@echo "... test/output_test.o"
 	@echo "... test/output_test.i"
 	@echo "... test/output_test.s"
-	@echo "... test/unpack_test.o"
-	@echo "... test/unpack_test.i"
-	@echo "... test/unpack_test.s"
-	@echo "... util/raw2ppm.o"
-	@echo "... util/raw2ppm.i"
-	@echo "... util/raw2ppm.s"
+	@echo "... util/licensed/gpl/raw2ppm.o"
+	@echo "... util/licensed/gpl/raw2ppm.i"
+	@echo "... util/licensed/gpl/raw2ppm.s"
 .PHONY : help
 
 

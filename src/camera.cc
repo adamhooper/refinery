@@ -7,12 +7,9 @@
 
 #include <boost/foreach.hpp>
 
-#include <exiv2/exif.hpp>
-#include <exiv2/tags.hpp>
+#include "refinery/exif.h"
 
 namespace refinery {
-
-using Exiv2::ExifData;
 
 namespace CameraModels {
   const double XyzToRgb[3][3] = {
@@ -22,70 +19,6 @@ namespace CameraModels {
   };
 
   const double D65White[3] = { 0.950456, 1, 1.088754 };
-
-  bool hasExifKey(const ExifData& exifData, const char* key)
-  {
-    Exiv2::ExifKey exifKey(key);
-    ExifData::const_iterator it(exifData.findKey(exifKey));
-
-    return it != exifData.end();
-  }
-
-  const Exiv2::Value& getExifValue(const ExifData& exifData, const char* key)
-  {
-    Exiv2::ExifKey exifKey(key);
-    ExifData::const_iterator it(exifData.findKey(exifKey));
-    if (it == exifData.end()) {
-      throw std::logic_error(std::string("Invalid Exif key `") + key + "'");
-    }
-
-    return it->value();
-  }
-
-  long getExifLong(const ExifData& exifData, const char* key, int n = 0)
-  {
-    const Exiv2::Value& value(getExifValue(exifData, key));
-    long ret = value.toLong(n);
-    if (!value.ok()) {
-      std::stringstream err;
-      err << "Exif value should be type long, but has type ID "
-          << value.typeId() << ": " << key;
-      throw std::logic_error(err.str());
-    }
-    return ret;
-  }
-
-  float getExifFloat(const ExifData& exifData, const char* key, int n = 0)
-  {
-    const Exiv2::Value& value(getExifValue(exifData, key));
-    float ret = value.toFloat(n);
-    if (!value.ok()) {
-      std::stringstream err;
-      err << "Exif value should be type float, but has type ID "
-          << value.typeId() << ": " << key;
-      throw std::logic_error(err.str());
-    }
-    return ret;
-  }
-
-  std::string getExifString(const ExifData& exifData, const char* key)
-  {
-    const Exiv2::Value& value(getExifValue(exifData, key));
-    std::string ret = value.toString();
-    if (!value.ok()) {
-      std::stringstream err;
-      err << "Exif value should be type string, but has type ID "
-          << value.typeId() << ": " << key;
-      throw std::logic_error(err.str());
-    }
-    return ret;
-  }
-
-  bool hasExifDataEqualTo(
-      const ExifData& exifData, const char* key, const char* test)
-  {
-    return hasExifKey(exifData, key) && getExifString(exifData, key) == test;
-  }
 
   class AdobeColorConversionCamera : public virtual Camera {
     void dcraw_pseudoinverse(double (*in)[3], double (*out)[3], int size) const
@@ -723,10 +656,12 @@ namespace CameraModels {
     virtual const char* model() const { return "D5000"; }
     virtual unsigned int colors() const { return 3; }
     virtual unsigned int orientation(const ExifData& exifData) const {
-      return getExifLong(exifData, "Exif.Image.Orientation");
+      return exifData.getInt("Exif.Image.Orientation");
     }
     virtual bool canHandle(const ExifData& exifData) const {
-      return hasExifDataEqualTo(exifData, "Exif.Image.Model", "NIKON D5000");
+      const char* key = "Exif.Image.Model";
+      const char* test = "NIKON D5000";
+      return exifData.hasKey(key) && exifData.getString(key) == test;
     }
   };
 } // namespace CameraModels

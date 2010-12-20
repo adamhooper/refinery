@@ -9,6 +9,7 @@
 
 #include <exiv2/exif.hpp>
 
+#include "refinery/exif.h"
 #include "refinery/image.h"
 #include "refinery/unpack.h"
 
@@ -25,7 +26,7 @@ TEST(ImageWriterTest, WritePpm16Bit) {
       std::ios::in | std::ios::binary);
 
   refinery::ImageReader reader;
-  Exiv2::ExifData exifData;
+  refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
       reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);
@@ -55,7 +56,7 @@ TEST(ImageWriterTest, WritePpm8Bit) {
 
   refinery::ImageReader reader;
 
-  Exiv2::ExifData exifData;
+  refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
       reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);

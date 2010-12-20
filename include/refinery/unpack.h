@@ -4,11 +4,9 @@
 #include <cstddef>
 #include <iosfwd>
 
-namespace Exiv2 {
-  class ExifData;
-}
-
 namespace refinery {
+
+class ExifData;
 
 template<typename T, std::size_t N> class TypedImage;
 typedef TypedImage<unsigned short, 3> Image;
@@ -24,11 +22,11 @@ public:
    * With most image types, you can read with and height using an
    * Exiv2::ExifImage. A notable exception is PPM: if you read an
    * image/x-portable-pixmap file the width and height will be ignored. You
-   * must still pass in an Exiv2::ExifData& though.
+   * must still pass in an ExifData& though.
    */
   Image* readImage(
       std::streambuf& istream, const char* mimeType,
-      int width, int height, const Exiv2::ExifData& exifData);
+      int width, int height, const ExifData& exifData);
 };
 
 }
