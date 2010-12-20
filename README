@@ -7,6 +7,11 @@ Authors: read AUTHORS
 Licence: read COPYING
 Bugs: https://github.com/adamh/refinery/issues
 
+EXAMPLE
+=======
+
+Read util/licensed/gpl/raw2ppm.cc: it reads a raw file and outputs a PPM image.
+
 
 COMPILING
 =========
