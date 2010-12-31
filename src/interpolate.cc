@@ -419,20 +419,20 @@ private:
 
   void rgbToLab(
       const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
-      const float (&xyzToCamera)[3][4])
+      const float (&cameraToXyz)[3][4])
   {
     float cbrtX = xyz64Cbrt(0.5f
-        + xyzToCamera[X][R] * rgb[R]
-        + xyzToCamera[X][G] * rgb[G]
-        + xyzToCamera[X][B] * rgb[B]);
+        + cameraToXyz[X][R] * rgb[R]
+        + cameraToXyz[X][G] * rgb[G]
+        + cameraToXyz[X][B] * rgb[B]);
     float cbrtY = xyz64Cbrt(0.5f
-        + xyzToCamera[Y][R] * rgb[R]
-        + xyzToCamera[Y][G] * rgb[G]
-        + xyzToCamera[Y][B] * rgb[B]);
+        + cameraToXyz[Y][R] * rgb[R]
+        + cameraToXyz[Y][G] * rgb[G]
+        + cameraToXyz[Y][B] * rgb[B]);
     float cbrtZ = xyz64Cbrt(0.5f
-        + xyzToCamera[Z][R] * rgb[R]
-        + xyzToCamera[Z][G] * rgb[G]
-        + xyzToCamera[Z][B] * rgb[B]);
+        + cameraToXyz[Z][R] * rgb[R]
+        + cameraToXyz[Z][G] * rgb[G]
+        + cameraToXyz[Z][B] * rgb[B]);
 
     lab[L] = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
     lab[A] = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
@@ -441,7 +441,7 @@ private:
 
   void createCielabImage(
       const ImageTile& imageTile, LABImageTile& labImageTile,
-      const float (&xyzToCamera)[3][4])
+      const float (&cameraToXyz)[3][4])
   {
     const unsigned int top = imageTile.top() + 1;
     const unsigned int left = imageTile.left() + 1;
@@ -456,7 +456,7 @@ private:
           &labImageTile.pixelsAtImageCoords(row, left)[0]);
 
       for (unsigned int col = left; col < right; col++) {
-        rgbToLab(pix[0], lPix[0], xyzToCamera);
+        rgbToLab(pix[0], lPix[0], cameraToXyz);
         pix++;
         lPix++;
       }
@@ -617,11 +617,11 @@ public:
 
     const Camera::ColorConversionData colorData(
         image.cameraData().colorConversionData());
-    float xyzToCamera[3][4];
+    float cameraToXyz[3][4];
     for (unsigned int i = 0; i < 3; i++) {
       for (unsigned int j = 0; j < image.cameraData().colors(); j++) {
         // convert from double to float, for speed
-        xyzToCamera[i][j] = colorData.xyzToCamera[i][j];
+        cameraToXyz[i][j] = colorData.cameraToXyz[i][j];
       }
     }
 
@@ -672,8 +672,8 @@ public:
           fillDirectionalImage(image, hImageTile);
           fillDirectionalImage(image, vImageTile);
 
-          createCielabImage(hImageTile, hLabImageTile, xyzToCamera);
-          createCielabImage(vImageTile, vLabImageTile, xyzToCamera);
+          createCielabImage(hImageTile, hLabImageTile, cameraToXyz);
+          createCielabImage(vImageTile, vLabImageTile, cameraToXyz);
 
           fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
 

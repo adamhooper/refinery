@@ -24,10 +24,10 @@ public:
   struct ColorConversionData {
     short black;
     short maximum;
-    double cameraToXyz[4][3];
-    double cameraToRgb[4][3];
-    double rgbToCamera[3][4];
-    double xyzToCamera[3][4];
+    double xyzToCamera[4][3];
+    double rgbToCamera[4][3];
+    double cameraToRgb[3][4];
+    double cameraToXyz[3][4];
     double cameraMultipliers[4];
     double scalingMultipliers[4];
   };

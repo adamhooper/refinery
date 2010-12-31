@@ -12,7 +12,7 @@
 namespace refinery {
 
 namespace CameraModels {
-  const double XyzToRgb[3][3] = {
+  const double RgbToXyz[3][3] = {
     { 0.412453, 0.357580, 0.180423 },
     { 0.212671, 0.715160, 0.072169 },
     { 0.019334, 0.119193, 0.950227 }
@@ -563,7 +563,7 @@ namespace CameraModels {
           fail = false;
           ret.black = table[i].black;
           ret.maximum = table[i].maximum;
-          double* xyz(reinterpret_cast<double*>(ret.cameraToXyz));
+          double* xyz(reinterpret_cast<double*>(ret.xyzToCamera));
           for (int j = 0; j < 12; j++) {
             xyz[j] = table[i].trans[j] / 10000.0;
           }
@@ -573,23 +573,23 @@ namespace CameraModels {
           std::string("Missing Adobe coefficients for camera: ") + aName);
 
       const int aColors = colors();
-      // Multiply out cameraToRgb ...
+      // Multiply out rgbToCamera ...
       for (int i = 0; i < aColors; i++) {
         for (int j = 0; j < 3; j++) {
-          ret.cameraToRgb[i][j] = 0;
+          ret.rgbToCamera[i][j] = 0;
           for (int k = 0; k < 3; k++) {
-            ret.cameraToRgb[i][j] += ret.cameraToXyz[i][k] * XyzToRgb[k][j];
+            ret.rgbToCamera[i][j] += ret.xyzToCamera[i][k] * RgbToXyz[k][j];
           }
         }
       }
-      // ... and normalize it (so cameraToRgb * (1,1,1) == (1,1,1))
+      // ... and normalize it (so rgbToCamera * (1,1,1) == (1,1,1))
       for (int i = 0; i < aColors; i++) {
         double sum = 0;
         for (int j = 0; j < 3; j++) {
-          sum += ret.cameraToRgb[i][j];
+          sum += ret.rgbToCamera[i][j];
         }
         for (int j = 0; j < 3; j++) {
-          ret.cameraToRgb[i][j] /= sum;
+          ret.rgbToCamera[i][j] /= sum;
         }
         ret.cameraMultipliers[i] = 1 / sum;
       }
@@ -608,22 +608,22 @@ namespace CameraModels {
             ret.cameraMultipliers[i] * 65535.0 / ret.maximum;
       }
 
-      // set rgbToCamera
+      // set cameraToRgb
       double inverse[4][3];
-      dcraw_pseudoinverse(ret.cameraToRgb, inverse, aColors);
+      dcraw_pseudoinverse(ret.rgbToCamera, inverse, aColors);
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < aColors; j++) {
-          ret.rgbToCamera[i][j] = inverse[j][i];
+          ret.cameraToRgb[i][j] = inverse[j][i];
         }
       }
 
-      // set xyzToCamera
+      // set cameraToXyz
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < aColors; j++) {
-          ret.xyzToCamera[i][j] = 0;
+          ret.cameraToXyz[i][j] = 0;
           for (int k = 0; k < 3; k++) {
-            ret.xyzToCamera[i][j] +=
-                XyzToRgb[i][k] * ret.rgbToCamera[k][j] / D65White[i];
+            ret.cameraToXyz[i][j] +=
+                RgbToXyz[i][k] * ret.cameraToRgb[k][j] / D65White[i];
           }
         }
       }
