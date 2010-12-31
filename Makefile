@@ -404,6 +404,30 @@ src/unpack.cc.s:
 	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/unpack.cc.s
 .PHONY : src/unpack.cc.s
 
+test/color_test.o: test/color_test.cc.o
+.PHONY : test/color_test.o
+
+# target to build an object file
+test/color_test.cc.o:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/color_test.cc.o
+.PHONY : test/color_test.cc.o
+
+test/color_test.i: test/color_test.cc.i
+.PHONY : test/color_test.i
+
+# target to preprocess a source file
+test/color_test.cc.i:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/color_test.cc.i
+.PHONY : test/color_test.cc.i
+
+test/color_test.s: test/color_test.cc.s
+.PHONY : test/color_test.s
+
+# target to generate assembly for a file
+test/color_test.cc.s:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/color_test.cc.s
+.PHONY : test/color_test.cc.s
+
 test/gtest_main.o: test/gtest_main.cc.o
 .PHONY : test/gtest_main.o
 
@@ -591,6 +615,9 @@ help:
 	@echo "... src/unpack.o"
 	@echo "... src/unpack.i"
 	@echo "... src/unpack.s"
+	@echo "... test/color_test.o"
+	@echo "... test/color_test.i"
+	@echo "... test/color_test.s"
 	@echo "... test/gtest_main.o"
 	@echo "... test/gtest_main.i"
 	@echo "... test/gtest_main.s"
