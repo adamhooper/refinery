@@ -67,14 +67,7 @@ namespace {
     void filter() {
       Camera::ColorConversionData colorData(mCameraData.colorConversionData());
 
-      float outToCamera[3][4]; // transpose, convert to float from double
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 4; j++) {
-          outToCamera[i][j] = colorData.rgbToCamera[i][j];
-        }
-      }
-
-      ColorConverter<float, 4, 3> converter(outToCamera);
+      ColorConverter<float, 4, 3> converter(colorData.rgbToCamera);
 
       const unsigned int height(mImage.height());
       const unsigned int width(mImage.width());
@@ -82,7 +75,7 @@ namespace {
       for (unsigned int row = 0; row < height; row++) {
         Image::RowType pixels(&mImage.pixelsRow(row)[0]);
         for (unsigned int col = 0; col < width; col++, pixels++) {
-          float rgb[3] = { 0.0f, 0.0f, 0.0f };
+          float rgb[3];
           converter.convert(pixels[0], rgb);
 
           pixels[0][0] = clamp16(rgb[0]);
