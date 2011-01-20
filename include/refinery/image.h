@@ -36,21 +36,63 @@ struct Point {
   }
 };
 
-template<typename T, std::size_t N = 3> class TypedImage {
-public:
+template<typename T> struct RGBPixel {
+  typedef unsigned int ColorType;
   typedef T ValueType;
-  typedef std::vector<ValueType> PixelsType;
-  typedef ValueType (*RowType)[N];
-  typedef const ValueType (*ConstRowType)[N];
-  typedef ValueType* PixelType;
-  typedef const ValueType* ConstPixelType;
-  typedef unsigned int Color;
+  T r;
+  T g;
+  T b;
 
-  static const Color R = 0;
-  static const Color G = 1;
-  static const Color B = 2;
+  RGBPixel() : r(0), g(0), b(0) {}
+  RGBPixel(T r, T g, T b) : r(r), g(g), b(b) {}
+  template<typename U> RGBPixel(const U (&rhs)[3])
+    : r(rhs[0]), g(rhs[1]), b(rhs[2]) {}
+  template<typename U> RGBPixel(const RGBPixel<U>& rhs)
+    : r(rhs.r), g(rhs.g), b(rhs.b) {}
+  inline T& operator[](const ColorType& index) {
+    return index == 0 ? r : (index == 1 ? g : b);
+  }
+  inline const T& at(const ColorType& index) const {
+    return index == 0 ? r : (index == 1 ? g : b);
+  }
+};
+
+template<typename T> struct LABPixel {
+  typedef unsigned int ColorType;
+  typedef T ValueType;
+  T l;
+  T a;
+  T b;
+
+  LABPixel() : l(0), a(0), b(0) {}
+  LABPixel(T l, T a, T b) : l(l), a(a), b(b) {}
+  template<typename U> LABPixel(const U (&rhs)[3])
+    : l(rhs[0]), a(rhs[1]), b(rhs[2]) {}
+  template<typename U> LABPixel(const LABPixel<U>& rhs)
+    : l(rhs.l), a(rhs.a), b(rhs.b) {}
+  inline T& operator[](const ColorType& index) {
+    return index == 0 ? l : (index == 1 ? a : b);
+  }
+};
+
+template<typename T> struct GrayPixel {
+  typedef unsigned int ColorType;
+  typedef T ValueType;
+  T value;
+
+  GrayPixel() : value(0) {}
+  GrayPixel(T value) : value(value) {}
+  template<typename U> GrayPixel(const GrayPixel<U>& rhs) : value(rhs.value) {}
+};
+
+template<typename T> class TypedImage {
+public:
+  typedef T PixelType;
+  typedef typename T::ValueType ValueType;
+  typedef typename T::ColorType ColorType;
 
 private:
+  typedef std::vector<PixelType> PixelsType;
   CameraData mCameraData;
   int mWidth;
   int mHeight;
@@ -58,11 +100,17 @@ private:
   int mFilters;
   PixelsType mPixels;
 
+  void allocate()
+  {
+    mPixels.assign(mWidth * mHeight, PixelType());
+  }
+
 public:
-  TypedImage(const CameraData& cameraData, int width = 0, int height = 0)
+  TypedImage(const CameraData& cameraData, int width, int height)
     : mCameraData(cameraData), mWidth(width), mHeight(height), mBpp(0),
     mFilters(0)
   {
+    this->allocate();
   }
 
   const CameraData& cameraData() const { return mCameraData; }
@@ -72,58 +120,70 @@ public:
   int filters() const { return mFilters; }
   void setBytesPerPixel(int bpp) { mBpp = bpp; }
   void setFilters(int filters) { mFilters = filters; }
-  void setWidth(int width) { mWidth = width; }
-  void setHeight(int height) { mHeight = height; }
-  template<class U> void importAttributes(const TypedImage<U>& other) {
-    mWidth = other.width();
-    mHeight = other.height();
-    mBpp = other.bytesPerPixel();
-    mFilters = other.filters();
-  }
 
-  Color colorAtPoint(const Point& point) const {
+  ColorType colorAtPoint(const Point& point) const {
     int row = point.row;
     int col = point.col;
     return (mFilters >> (((row << 1 & 14) | (col & 1)) << 1)) & 3;
   }
-  Color colorAtPoint(unsigned int row, unsigned int col) const {
+  ColorType colorAtPoint(unsigned int row, unsigned int col) const {
     return colorAtPoint(Point(row, col));
   }
 
-  const PixelsType& constPixels() const { return mPixels; }
-  PixelsType& pixels() { return mPixels; }
+  const PixelType* constPixels() const { return &mPixels[0]; }
+  PixelType* pixels() { return &mPixels[0]; }
 
-  ConstRowType constPixelsRow(int row) const {
-    return reinterpret_cast<ConstRowType>(&mPixels[row * mWidth * N]);
+  const PixelType* constPixelsAtRow(int row) const {
+    return &mPixels[row * mWidth];
   }
-  RowType pixelsRow(int row) {
-    return reinterpret_cast<RowType>(&mPixels[row * mWidth * N]);
+  PixelType* pixelsAtRow(int row) {
+    return &mPixels[row * mWidth];
   }
 
-  PixelType pixel(const Point& point) {
+  PixelType* pixelsAtPoint(const Point& point) {
     int row = point.row;
     int col = point.col;
-    return &mPixels[(row * mWidth + col) * N];
+    return &mPixels[row * mWidth + col];
   }
-  PixelType pixel(unsigned int row, unsigned int col) {
-    return pixel(Point(row, col));
+  PixelType* pixelsAtPoint(unsigned int row, unsigned int col) {
+    return pixelsAtPoint(Point(row, col));
   }
-  ConstPixelType constPixel(const Point& point) const {
+  const PixelType* constPixelsAtPoint(const Point& point) {
     int row = point.row;
     int col = point.col;
-    return &mPixels[(row * mWidth + col) * N];
+    return &mPixels[row * mWidth + col];
   }
-  ConstPixelType constPixel(unsigned int row, unsigned int col) const {
-    return constPixel(Point(row, col));
+  const PixelType* constPixelsAtPoint(unsigned int row, unsigned int col) {
+    return pixelsAtPoint(Point(row, col));
+  }
+
+  PixelType& pixelAtPoint(const Point& point) {
+    return *pixelsAtPoint(point);
+  }
+  PixelType& pixelAtPoint(unsigned int row, unsigned int col) {
+    return *pixelsAtPoint(row, col);
+  }
+  const PixelType& constPixelAtPoint(const Point& point) {
+    return *constPixelsAtPoint(point);
+  }
+  const PixelType& constPixelAtPoint(unsigned int row, unsigned int col) {
+    return *constPixelsAtPoint(row, col);
   }
 };
 
-template class TypedImage<unsigned short>;
-template class TypedImage<short>;
+typedef RGBPixel<unsigned short> u16RGBPixel;
+typedef LABPixel<short> s16LABPixel;
+typedef GrayPixel<unsigned short> u16GrayPixel;
 
-typedef TypedImage<unsigned short, 3> RGBImage;
+template class TypedImage<u16RGBPixel>;
+template class TypedImage<s16LABPixel>;
+template class TypedImage<u16GrayPixel>;
+
+typedef TypedImage<u16RGBPixel> RGBImage;
+typedef TypedImage<s16LABPixel> LABImage;
+typedef TypedImage<u16GrayPixel> GrayImage;
+
 typedef RGBImage Image;
-typedef TypedImage<short, 3> LABImage;
 
 }; /* namespace refinery */
 

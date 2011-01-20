@@ -8,8 +8,9 @@ namespace refinery {
 
 class ExifData;
 
-template<typename T, std::size_t N> class TypedImage;
-typedef TypedImage<unsigned short, 3> Image;
+template<typename T> class RGBPixel;
+template<typename T> class TypedImage;
+typedef TypedImage<RGBPixel<unsigned short> > Image;
 
 class ImageReader {
 public:

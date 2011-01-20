@@ -11,7 +11,7 @@ namespace {
     Image& mImage;
     const CameraData& mCameraData;
 
-    unsigned short clamp16(int val) {
+    Image::ValueType clamp16(int val) {
       if (val < 0) return 0;
       if (val > 0xffff) return 0xffff;
       return val;
@@ -33,9 +33,9 @@ namespace {
       const unsigned int width(mImage.width());
 
       for (unsigned int row = 0; row < height; row++) {
-        Image::RowType pix(&mImage.pixelsRow(row)[0]);
+        Image::PixelType* pix(&mImage.pixelsAtRow(row)[0]);
 
-        Image::Color c = mImage.colorAtPoint(Point(row, 0));
+        Image::ColorType c = mImage.colorAtPoint(Point(row, 0));
         double multiplier = colorData.scalingMultipliers[c];
         for (unsigned int col = 0; col < width; col += 2) {
           pix[col][c] = clamp16(multiplier * pix[col][c]);
@@ -73,14 +73,14 @@ namespace {
       const unsigned int width(mImage.width());
 
       for (unsigned int row = 0; row < height; row++) {
-        Image::RowType pixels(&mImage.pixelsRow(row)[0]);
+        Image::PixelType* pixels(mImage.pixelsAtRow(row));
         for (unsigned int col = 0; col < width; col++, pixels++) {
-          float rgb[3];
+          RGBPixel<float> rgb;
           converter.convert(pixels[0], rgb);
 
-          pixels[0][0] = clamp16(rgb[0]);
-          pixels[0][1] = clamp16(rgb[1]);
-          pixels[0][2] = clamp16(rgb[2]);
+          pixels[0][0] = clamp16(rgb.r);
+          pixels[0][1] = clamp16(rgb.g);
+          pixels[0][2] = clamp16(rgb.b);
         }
       }
     }

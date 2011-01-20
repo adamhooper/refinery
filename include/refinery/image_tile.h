@@ -3,32 +3,34 @@
 
 namespace refinery {
 
-template<typename T, std::size_t N> class TypedImage;
+template<typename T> class RGBPixel;
+template<typename T> class TypedImage;
+typedef TypedImage<RGBPixel<unsigned short> > Image;
 
-template<typename T, std::size_t N = 3> class TypedImageTile {
+template<typename T> class TypedImageTile {
 public:
-  typedef TypedImage<T,N> ImageType;
-  typedef T ValueType;
-  typedef ValueType (*PixelsType)[N];
-  typedef const ValueType (*ConstPixelsType)[N];
+  typedef T ImageType;
+  typedef typename T::PixelType PixelType;
+  typedef typename T::ValueType ValueType;
+  typedef typename T::ColorType ColorType;
 
 private:
-  typedef std::vector<ValueType> StorageType;
+  typedef std::vector<PixelType> PixelsType;
   Point mImageSize;
   Point mTopLeft;
   Point mSize;
   unsigned int mEdgeSize;
-  StorageType mPixels;
+  PixelsType mPixels;
 
   void allocate()
   {
-    mPixels.assign(mSize.row * mSize.col * N, 0);
+    mPixels.assign(mSize.row * mSize.col, PixelType());
   }
 
   ptrdiff_t offsetForImagePoint(const Point& imagePoint) const
   {
     Point tilePoint(imagePoint - mTopLeft);
-    return (tilePoint.row * mSize.col + tilePoint.col) * N;
+    return tilePoint.row * mSize.col + tilePoint.col;
   }
 
 public:
@@ -73,25 +75,24 @@ public:
     }
   }
 
-  PixelsType pixelsAtImageCoords(const Point& point) {
+  PixelType* pixelsAtImageCoords(const Point& point) {
     const ptrdiff_t offset(offsetForImagePoint(point));
-    return reinterpret_cast<PixelsType>(&mPixels[offset]);
+    return &mPixels[offset];
   }
-  PixelsType pixelsAtImageCoords(int row, int col) {
+  PixelType* pixelsAtImageCoords(int row, int col) {
     return pixelsAtImageCoords(Point(row, col));
   }
-  ConstPixelsType constPixelsAtImageCoords(const Point& point) const {
+  const PixelType* constPixelsAtImageCoords(const Point& point) const {
     const ptrdiff_t offset(offsetForImagePoint(point));
-    return reinterpret_cast<ConstPixelsType>(&mPixels[offset]);
+    return &mPixels[offset];
   }
-  ConstPixelsType constPixelsAtImageCoords(int row, int col) const {
+  const PixelType* constPixelsAtImageCoords(int row, int col) const {
     return constPixelsAtImageCoords(Point(row, col));
   }
 };
 
-typedef TypedImageTile<unsigned short, 3> RGBImageTile;
-typedef RGBImageTile ImageTile;
-typedef TypedImageTile<short, 3> LABImageTile;
+typedef TypedImageTile<RGBImage> RGBImageTile;
+typedef TypedImageTile<LABImage> LABImageTile;
 
 }; /* namespace refinery */
 

@@ -21,7 +21,9 @@ namespace unpack {
 
   class PpmUnpacker : public Unpacker {
   private:
-    void unpackHeader(std::streambuf& is, Image& image)
+    // Sets width, height, bpp and advances the file pointer to the pixel data
+    void unpackHeader(
+        std::streambuf& is, int& outWidth, int& outHeight, int& outBpp)
     {
       const int HEADER_SIZE = 22; // usually overkill
       char buf[HEADER_SIZE];
@@ -34,19 +36,16 @@ namespace unpack {
       std::string p6;
       headerIss >> p6; // "P6"
 
-      unsigned short width, height;
-      headerIss >> width >> height;
+      headerIss >> outWidth >> outHeight;
 
       unsigned short maxValue;
       headerIss >> maxValue;
 
+      outBpp = maxValue == 65535 ? 6 : 3;
+
       is.pubseekoff(
           static_cast<int>(headerIss.tellg()) + 1 - HEADER_SIZE,
           std::ios::cur);
-
-      image.setWidth(width);
-      image.setHeight(height);
-      image.setBytesPerPixel(maxValue == 65535 ? 6 : 3);
     }
 
     void copyShorts(
@@ -78,16 +77,18 @@ namespace unpack {
       CameraData cameraData(
           CameraDataFactory::instance().getCameraData(exifData));
 
-      std::auto_ptr<Image> image(new Image(cameraData, width, height));
+      int bpp;
+      unpackHeader(is, width, height, bpp);
 
-      unpackHeader(is, *image);
+      std::auto_ptr<Image> image(new Image(cameraData, width, height));
+      image->setBytesPerPixel(bpp);
 
       unsigned int nValues =
           image->width() * image->height()
           * image->bytesPerPixel() / sizeof(Image::ValueType);
 
-      image->pixels().assign(nValues, 0);
-      unsigned short* shorts(static_cast<unsigned short*>(&image->pixels()[0]));
+      unsigned short* shorts(
+          reinterpret_cast<unsigned short*>(&image->pixels()[0]));
 
       if (image->bytesPerPixel() == 6) {
         copyShorts(is, nValues, shorts);
@@ -306,13 +307,12 @@ namespace unpack {
 
       image.setFilters(filters);
       image.setBytesPerPixel(6);
-      image.pixels().assign(width * height * 3, 0);
 
       std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, exifData));
       int min = 0;
       for (int row = 0; row < height; row++) {
-        Image::RowType rowPixels(image.pixelsRow(row));
-        Image::Color rowColors[2] = {
+        Image::PixelType* rowPixels(image.pixelsAtRow(row));
+        Image::ColorType rowColors[2] = {
           image.colorAtPoint(Point(row, 0)),
           image.colorAtPoint(Point(row, 1))
         };
@@ -375,7 +375,8 @@ namespace unpack {
 
       if (sMimeType == "image/x-portable-pixmap") {
         return new PpmUnpacker();
-      } else if (sMimeType == "image/tiff") {
+      } else if (sMimeType == "image/tiff"
+                 || sMimeType == "image/x-nikon-nef") {
         // for now...
         return new NefCompressedLossy2Unpacker();
       }

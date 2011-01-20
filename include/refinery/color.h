@@ -5,6 +5,8 @@
 
 namespace refinery {
 
+template<typename T> struct RGBColor;
+
 template<typename T, std::size_t NFrom, std::size_t NTo>
 class ColorConverter {
   T mMatrix[NTo][NFrom];
@@ -55,6 +57,17 @@ public:
     for (unsigned int i = 0; i < NFrom - 1; i++) {
       for (unsigned int j = 0; j < NTo; j++) {
         out[j] += mMatrix[j][i] * in[i];
+      }
+    }
+  }
+
+  template<typename U, typename V> void convert(const U& in, V& out)
+  {
+    out = V();
+
+    for (unsigned int i = 0; i < 4; i++) {
+      for (unsigned int j = 0; j < 3; j++) {
+        out[j] += mMatrix[j][i] * in.at(i);
       }
     }
   }

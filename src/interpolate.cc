@@ -12,8 +12,6 @@ namespace refinery {
 
 namespace {
   void interpolateBorder(Image& image, int border) {
-    typedef Image::Color Color;
-
     const int width = image.width(), height = image.height();
     const int top = 0, left = 0, right = width, bottom = height;
 
@@ -33,17 +31,17 @@ namespace {
             if (x < left || x >= right) continue;
 
             Point p(y, x);
-            Color c = image.colorAtPoint(p);
-            sum[c] += image.pixel(p)[c];
+            Image::ColorType c = image.colorAtPoint(p);
+            sum[c] += image.pixelAtPoint(p)[c];
             count[c]++;
           }
         }
 
         Point curP(row, col);
-        Color curC = image.colorAtPoint(curP);
-        for (Color c = 0; c < 4; c++) {
+        Image::ColorType curC = image.colorAtPoint(curP);
+        for (Image::ColorType c = 0; c < 4; c++) {
           if (c != curC && count[c]) {
-            image.pixel(curP)[c] = sum[c] / count[c];
+            image.pixelAtPoint(curP)[c] = sum[c] / count[c];
           }
         }
       }
@@ -126,7 +124,7 @@ public:
     const PixelsInstructions pixelsInstructions(image);
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::RowType pix(&image.pixelsRow(row)[left]);
+      Image::PixelType* pix(&image.pixelsAtRow(row)[left]);
       for (unsigned int col = left; col < right; col++, pix++) {
         const PixelInstructions& instructions(
             pixelsInstructions.getPixelInstructions(row, col));
@@ -158,24 +156,31 @@ namespace { std::vector<float> xyzCbrtLookup; } // FIXME make singleton
 
 class AHDInterpolator {
 private:
+  typedef RGBImage XYZImage;
+  struct HomogeneityPixel {
+    typedef char ValueType;
+    typedef unsigned int ColorType;
+    ValueType h;
+    ValueType v;
+    ValueType diff;
 
-  typedef Image::Color Color;
-  typedef TypedImageTile<char, 3> HomogeneityTile; // 1: H; 2: V; 3: diff
+    HomogeneityPixel() : h(h), v(v), diff(diff) {}
+    ValueType& operator[](const ColorType& index) {
+      return index == 0 ? h : v;
+    }
+    const ValueType& at(const ColorType& index) const {
+      return index == 0 ? h : v;
+    }
+  };
+  typedef TypedImage<HomogeneityPixel> HomogeneityImage;
+  typedef TypedImageTile<HomogeneityImage> HomogeneityTile;
 
-  static const Color R = Image::R;
-  static const Color G = Image::G;
-  static const Color B = Image::B;
+  typedef TypedImageTile<Image> ImageTile;
 
-  static const Color X = 0;
-  static const Color Y = 1;
-  static const Color Z = 2;
+  typedef RGBImage::ColorType Color;
 
-  static const Color L = 0;
-  static const Color A = 1;
-  /*static const Color B = 2;*/ /* (lucky they're the same!) */
-
-  static const Color H = 0;
-  static const Color V = 1;
+  static const unsigned int H = 0;
+  static const unsigned int V = 1;
 
   float xyzCbrtMin;
   float xyzCbrtMax;
@@ -254,15 +259,15 @@ private:
       unsigned int col =
           left + (image.colorAtPoint(Point(row, left)) & 1); // 1st R or B
 
-      Image::ConstRowType pix(&image.constPixelsRow(row)[col]);
+      const Image::PixelType* pix(&image.constPixelsAtRow(row)[col]);
 
-      Image::ConstRowType pixAbove(&pix[-width]);
-      Image::ConstRowType pix2Above(&pix[-2 * width]);
-      Image::ConstRowType pixBelow(&pix[width]);
-      Image::ConstRowType pix2Below(&pix[2 * width]);
+      const Image::PixelType* pixAbove(&pix[-width]);
+      const Image::PixelType* pix2Above(&pix[-2 * width]);
+      const Image::PixelType* pixBelow(&pix[width]);
+      const Image::PixelType* pix2Below(&pix[2 * width]);
 
-      ImageTile::PixelsType hPix(&hImageTile.pixelsAtImageCoords(row, col)[0]);
-      ImageTile::PixelsType vPix(&vImageTile.pixelsAtImageCoords(row, col)[0]);
+      ImageTile::PixelType* hPix(&hImageTile.pixelsAtImageCoords(row, col)[0]);
+      ImageTile::PixelType* vPix(&vImageTile.pixelsAtImageCoords(row, col)[0]);
 
       Color c(image.colorAtPoint(Point(row, col)));
 
@@ -270,14 +275,14 @@ private:
           col += 2, pix += 2, hPix += 2, vPix += 2,
           pixAbove += 2, pix2Above += 2, pixBelow += 2, pix2Below += 2) {
         Image::ValueType hValue =
-          ((pix[-1][G] + pix[0][c] + pix[1][G]) * 2
-           - pix[-2][c] - pix[2][c]) >> 2;
-        hPix[0][G] = bound(hValue, pix[-1][G], pix[1][G]);
+          ((pix[-1].g + pix[0].at(c) + pix[1].g) * 2
+           - pix[-2].at(c) - pix[2].at(c)) >> 2;
+        hPix[0].g = bound(hValue, pix[-1].g, pix[1].g);
 
         Image::ValueType vValue =
-          ((pixAbove[0][G] + pix[0][c] + pixBelow[0][G]) * 2
-            - pix2Above[0][c] - pix2Below[0][c]) >> 2;
-        vPix[0][G] = bound(vValue, pixAbove[0][G], pixBelow[0][G]);
+          ((pixAbove[0].g + pix[0].at(c) + pixBelow[0].g) * 2
+            - pix2Above[0].at(c) - pix2Below[0].at(c)) >> 2;
+        vPix[0].g = bound(vValue, pixAbove[0].g, pixBelow[0].g);
       }
     }
   }
@@ -289,10 +294,10 @@ private:
   }
 
   inline void incrPointers(
-      int n, Image::ConstRowType& pix,
-      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      ImageTile::ConstPixelsType& dPixAbove,
-      ImageTile::ConstPixelsType& dPixBelow)
+      int n, const Image::PixelType* (&pix),
+      const Image::PixelType* (&pixAbove), const Image::PixelType* (&pixBelow),
+      const ImageTile::PixelType* (&dPixAbove),
+      const ImageTile::PixelType* (&dPixBelow))
   {
     pix += n;
     pixAbove += n;
@@ -302,38 +307,38 @@ private:
   }
 
   inline void fillRandBinGPixel(
-      ImageTile::PixelsType& dPix, const Color& rowC, const Color& colC,
-      Image::ConstRowType& pix,
-      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      ImageTile::ConstPixelsType& dPixAbove,
-      ImageTile::ConstPixelsType& dPixBelow)
+      ImageTile::PixelType* dPix, const Color& rowC, const Color& colC,
+      const Image::PixelType* pix,
+      const Image::PixelType* pixAbove, const Image::PixelType* pixBelow,
+      const ImageTile::PixelType* dPixAbove,
+      const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        pix[0][G] +
-        ((pixAbove[0][colC] + pixBelow[0][colC]
-          - dPixAbove[0][G] - dPixBelow[0][G]) >> 1);
+        pix[0].g +
+        ((pixAbove[0].at(colC) + pixBelow[0].at(colC)
+          - dPixAbove[0].g - dPixBelow[0].g) >> 1);
     dPix[0][colC] = clamp16(colCValue);
 
     const int rowCValue =
-        pix[0][G] +
-        ((pix[-1][rowC] + pix[1][rowC] - dPix[-1][G] - dPix[1][G])
+        pix[0].g +
+        ((pix[-1].at(rowC) + pix[1].at(rowC) - dPix[-1].g - dPix[1].g)
           >> 1);
     dPix[0][rowC] = clamp16(rowCValue);
   }
 
   inline void fillRandBinBorRPixel(
-      ImageTile::PixelsType& dPix, const Color& rowC, const Color& colC,
-      Image::ConstRowType& pix,
-      Image::ConstRowType& pixAbove, Image::ConstRowType& pixBelow,
-      ImageTile::ConstPixelsType& dPixAbove,
-      ImageTile::ConstPixelsType& dPixBelow)
+      ImageTile::PixelType* dPix, const Color& rowC, const Color& colC,
+      const Image::PixelType* pix,
+      const Image::PixelType* pixAbove, const Image::PixelType* pixBelow,
+      const ImageTile::PixelType* dPixAbove,
+      const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        dPix[0][G] +
-        ((pixAbove[-1][colC] + pixAbove[1][colC]
-          + pixBelow[-1][colC] + pixBelow[1][colC]
-          - dPixAbove[-1][G] - dPixAbove[1][G]
-          - dPixBelow[-1][G] - dPixBelow[1][G]
+        dPix[0].g +
+        ((pixAbove[-1].at(colC) + pixAbove[1].at(colC)
+          + pixBelow[-1].at(colC) + pixBelow[1].at(colC)
+          - dPixAbove[-1].g - dPixAbove[1].g
+          - dPixBelow[-1].g - dPixBelow[1].g
           + 1) >> 2);
     dPix[0][colC] = clamp16(colCValue);
   }
@@ -347,6 +352,8 @@ private:
 
     const int width = image.width();
     const int dWidth = dirImageTile.width();
+
+    const Color G = 1;
 
     for (unsigned int row = top; row < bottom; row++) {
       /*
@@ -379,17 +386,17 @@ private:
         colC = 2 - c;
       }
 
-      ImageTile::PixelsType dPix(
+      ImageTile::PixelType* dPix(
           &dirImageTile.pixelsAtImageCoords(row, left + (c != G))[0]);
-      ImageTile::ConstPixelsType dPixAbove(&dPix[-dWidth]);
-      ImageTile::ConstPixelsType dPixBelow(&dPix[dWidth]);
+      const ImageTile::PixelType* dPixAbove(&dPix[-dWidth]);
+      const ImageTile::PixelType* dPixBelow(&dPix[dWidth]);
 
-      Image::ConstRowType pix(&image.constPixelsRow(row)[left + (c != G)]);
-      Image::ConstRowType pixAbove(&pix[-width]);
-      Image::ConstRowType pixBelow(&pix[width]);
+      const Image::PixelType* pix(&image.constPixelsAtRow(row)[left + (c != G)]);
+      const Image::PixelType* pixAbove(&pix[-width]);
+      const Image::PixelType* pixBelow(&pix[width]);
 
       for (unsigned int col = left + (c != G); col < right; col += 2) {
-        dPix[0][G] = pix[0][G];
+        dPix[0].g = pix[0].g;
 
         fillRandBinGPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -401,12 +408,12 @@ private:
       dPixAbove = &dPix[-dWidth];
       dPixBelow = &dPix[dWidth];
 
-      pix = &image.constPixelsRow(row)[left + (c == G)];
+      pix = &image.constPixelsAtRow(row)[left + (c == G)];
       pixAbove = &pix[-width];
       pixBelow = &pix[width];
 
       for (unsigned int col = left + (c == G); col < right; col += 2) {
-        dPix[0][rowC] = pix[0][rowC];
+        dPix[0][rowC] = pix[0].at(rowC);
 
         fillRandBinBorRPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -418,25 +425,25 @@ private:
   }
 
   void rgbToLab(
-      const Image::ValueType (&rgb)[3], LABImage::ValueType (&lab)[3],
+      const Image::PixelType& rgb, LABImage::PixelType& lab,
       const float (&cameraToXyz)[3][4])
   {
     float cbrtX = xyz64Cbrt(0.5f
-        + cameraToXyz[X][R] * rgb[R]
-        + cameraToXyz[X][G] * rgb[G]
-        + cameraToXyz[X][B] * rgb[B]);
+        + cameraToXyz[0][0] * rgb.r
+        + cameraToXyz[0][1] * rgb.g
+        + cameraToXyz[0][2] * rgb.b);
     float cbrtY = xyz64Cbrt(0.5f
-        + cameraToXyz[Y][R] * rgb[R]
-        + cameraToXyz[Y][G] * rgb[G]
-        + cameraToXyz[Y][B] * rgb[B]);
+        + cameraToXyz[1][0] * rgb.r
+        + cameraToXyz[1][1] * rgb.g
+        + cameraToXyz[1][2] * rgb.b);
     float cbrtZ = xyz64Cbrt(0.5f
-        + cameraToXyz[Z][R] * rgb[R]
-        + cameraToXyz[Z][G] * rgb[G]
-        + cameraToXyz[Z][B] * rgb[B]);
+        + cameraToXyz[2][0] * rgb.r
+        + cameraToXyz[2][1] * rgb.g
+        + cameraToXyz[2][2] * rgb.b);
 
-    lab[L] = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
-    lab[A] = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
-    lab[B] = static_cast<LABImage::ValueType>(200.0f * (cbrtY - cbrtZ));
+    lab.l = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
+    lab.a = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
+    lab.b = static_cast<LABImage::ValueType>(200.0f * (cbrtY - cbrtZ));
   }
 
   void createCielabImage(
@@ -449,10 +456,10 @@ private:
     const unsigned int bottom = imageTile.bottom() - 1;
 
     for (unsigned int row = top; row < bottom; row++) {
-      ImageTile::ConstPixelsType pix(
+      const ImageTile::PixelType* pix(
           &imageTile.constPixelsAtImageCoords(row, left)[0]);
 
-      LABImageTile::PixelsType lPix(
+      LABImageTile::PixelType* lPix(
           &labImageTile.pixelsAtImageCoords(row, left)[0]);
 
       for (unsigned int col = left; col < right; col++) {
@@ -484,15 +491,15 @@ private:
     const int ADJ[4] = { -1, 1, -width, width };
 
     for (unsigned int row = top; row < bottom; row++) {
-      HomogeneityTile::PixelsType homoPix(
+      HomogeneityTile::PixelType* homoPix(
           &homoTile.pixelsAtImageCoords(row, left)[0]);
 
-      LABImageTile::ConstPixelsType labPix[2] = {
+      const LABImageTile::PixelType* labPix[2] = {
         &hLabImageTile.constPixelsAtImageCoords(row, left)[0],
         &vLabImageTile.constPixelsAtImageCoords(row, left)[0]
       };
 
-      LABImageTile::ConstPixelsType labAdjPix[2][4];
+      const LABImageTile::PixelType* labAdjPix[2][4];
       for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
         labAdjPix[H][adjDir] = &labPix[H][ADJ[adjDir]];
         labAdjPix[V][adjDir] = &labPix[V][ADJ[adjDir]];
@@ -502,16 +509,16 @@ private:
         unsigned int lDiff[2][4], abDiff[2][4];
 
         for (unsigned int dir = H; dir <= V; dir++) {
-          LABImageTile::ConstPixelsType dirLabPix(labPix[dir]);
+          const LABImageTile::PixelType* dirLabPix(labPix[dir]);
 
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
-            LABImageTile::ConstPixelsType adjLabPix(labAdjPix[dir][adjDir]);
+            const LABImageTile::PixelType* adjLabPix(labAdjPix[dir][adjDir]);
 
-            const int adjDiffL = dirLabPix[0][L] - adjLabPix[0][L];
+            const int adjDiffL = dirLabPix[0].l - adjLabPix[0].l;
             lDiff[dir][adjDir] = std::abs(adjDiffL);
 
-            const int adjDiffA = dirLabPix[0][A] - adjLabPix[0][A];
-            const int adjDiffB = dirLabPix[0][B] - adjLabPix[0][B];
+            const int adjDiffA = dirLabPix[0].a - adjLabPix[0].a;
+            const int adjDiffB = dirLabPix[0].b - adjLabPix[0].b;
             abDiff[dir][adjDir] = adjDiffA * adjDiffA + adjDiffB * adjDiffB;
 
             labAdjPix[dir][adjDir]++;
@@ -561,10 +568,10 @@ private:
     const int tileWidth = hImageTile.width();
 
     for (unsigned int row = top; row < bottom; row++) {
-      HomogeneityTile::PixelsType homoPix(
+      HomogeneityTile::PixelType* homoPix(
           &homoTile.pixelsAtImageCoords(row, left)[0]);
-      HomogeneityTile::ConstPixelsType homoPixAbove(&homoPix[-tileWidth]);
-      HomogeneityTile::ConstPixelsType homoPixBelow(&homoPix[tileWidth]);
+      const HomogeneityTile::PixelType* homoPixAbove(&homoPix[-tileWidth]);
+      const HomogeneityTile::PixelType* homoPixBelow(&homoPix[tileWidth]);
 
       for (unsigned int col = left; col < right;
           col++, homoPix++, homoPixAbove++, homoPixBelow++) {
@@ -572,40 +579,36 @@ private:
         unsigned int hm[2] = { 0, 0 };
         for (unsigned int dir = H; dir <= V; dir++) {
           for (int i = -1; i <= 1; i++) {
-            hm[dir] += homoPixAbove[i][dir];
-            hm[dir] += homoPix[i][dir];
-            hm[dir] += homoPixBelow[i][dir];
+            hm[dir] += homoPixAbove[i].at(dir);
+            hm[dir] += homoPix[i].at(dir);
+            hm[dir] += homoPixBelow[i].at(dir);
           }
         }
 
-        homoPix[0][2] = hm[H] - hm[V];
+        homoPix[0].diff = hm[H] - hm[V];
       }
     }
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::RowType pix(&image.pixelsRow(row)[left]);
+      Image::PixelType* pix(&image.pixelsAtRow(row)[left]);
 
-      HomogeneityTile::ConstPixelsType homoPix(
+      const HomogeneityTile::PixelType* homoPix(
           &homoTile.constPixelsAtImageCoords(row, left)[0]);
-      ImageTile::ConstPixelsType hPix(
+      const ImageTile::PixelType* hPix(
           &hImageTile.constPixelsAtImageCoords(row, left)[0]);
-      ImageTile::ConstPixelsType vPix(
+      const ImageTile::PixelType* vPix(
           &vImageTile.constPixelsAtImageCoords(row, left)[0]);
 
       for (unsigned int col = left; col < right;
           col++, pix++, hPix++, vPix++, homoPix++) {
-        if (homoPix[0][2] > 0) {
-          for (Color c = R; c <= B; c++) {
-            pix[0][c] = hPix[0][c];
-          }
-        } else if (homoPix[0][2] < 0) {
-          for (Color c = R; c <= B; c++) {
-            pix[0][c] = vPix[0][c];
-          }
+        if (homoPix[0].diff > 0) {
+          pix[0] = hPix[0];
+        } else if (homoPix[0].diff < 0) {
+          pix[0] = vPix[0];
         } else {
-          for (Color c = R; c <= B; c++) {
-            pix[0][c] = (hPix[0][c] + vPix[0][c]) >> 1;
-          }
+          pix[0].r = (hPix[0].r + vPix[0].r) >> 1;
+          pix[0].g = (hPix[0].g + vPix[0].g) >> 1;
+          pix[0].b = (hPix[0].b + vPix[0].b) >> 1;
         }
       }
     }
@@ -642,7 +645,9 @@ public:
     Point imageSize(height, width);
     Point tileSize(tileHeight, tileWidth);
 
+#if _OPENMP
 #pragma omp parallel
+#endif /* _OPENMP */
     {
       Point tileTopLeft(border - margin, border - margin);
 
@@ -654,7 +659,9 @@ public:
           imageSize, tileTopLeft, tileSize, border, margin);
       HomogeneityTile homoTile(imageSize, tileTopLeft, tileSize, border, margin);
 
+#if _OPENMP
 #pragma omp for schedule(dynamic)
+#endif /* _OPENMP */
       for (unsigned int row = top; row < bottom; row += tileHeight - 2*margin) {
         tileTopLeft.row = row;
 

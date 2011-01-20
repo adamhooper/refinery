@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <fstream>
 
 #include "refinery/interpolate.h"
@@ -25,16 +26,15 @@ TEST(InterpolatorTest, AHDInterpolate) {
   refinery::Image image(cameraData, 225, 75);
   image.setBytesPerPixel(3);
   image.setFilters(0x61616161);
-  image.pixels().assign(
-      &nikon_d5000_225x75_sample[0], &nikon_d5000_225x75_sample[225*75*3]);
+  std::copy(
+      &nikon_d5000_225x75_sample[0], &nikon_d5000_225x75_sample[225*75*3],
+      reinterpret_cast<unsigned short*>(image.pixels()));
 
   refinery::Interpolator interpolator(refinery::Interpolator::INTERPOLATE_AHD);
   interpolator.interpolate(image);
 
   refinery::Image ref(cameraData, 225, 75);
   ref.setBytesPerPixel(3);
-  refinery::Image::PixelsType& pixels(ref.pixels());
-  pixels.assign(ref.width() * ref.height() * ref.bytesPerPixel(), 0);
 
   std::ifstream f;
   f.open("test/files/nikon_d5000_225x75_sample_ahd16.ppm");
@@ -70,7 +70,7 @@ TEST(InterpolatorTest, AHDInterpolate) {
           static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
           | static_cast<unsigned char>(lsb);
 
-      refinery::Image::PixelType p(image.pixel(refinery::Point(row, col)));
+      refinery::Image::PixelType p(image.pixelAtPoint(refinery::Point(row, col)));
       if (nFailures < 3) {
         EXPECT_EQ(refPixel.r, p[0]) << "(" << row << ", " << col << ")";
         EXPECT_EQ(refPixel.g, p[1]) << "(" << row << ", " << col << ")";

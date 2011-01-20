@@ -88,12 +88,12 @@ class Histogram {
     CurveType& bCurve(*mBCurve);
 
     for (int row = 0; row < image.height(); row++) {
-      Image::ConstRowType pixels(image.constPixelsRow(row));
+      const Image::PixelType* pixels(image.constPixelsAtRow(row));
 
       for (int col = 0; col < image.width(); col++, pixels++) {
-        rCurve[pixels[0][0] >> 3]++;
-        gCurve[pixels[0][1] >> 3]++;
-        bCurve[pixels[0][2] >> 3]++;
+        rCurve[pixels[0].r >> 3]++;
+        gCurve[pixels[0].g >> 3]++;
+        bCurve[pixels[0].b >> 3]++;
       }
     }
   }
@@ -107,12 +107,12 @@ public:
   Histogram(const Histogram& rhs)
     : mRCurve(rhs.mRCurve) , mGCurve(rhs.mGCurve), mBCurve(rhs.mBCurve) {}
 
-  inline unsigned short count(const Image::Color& color, unsigned int val) const
+  inline unsigned short count(const Image::ColorType& color, unsigned int val) const
   {
     switch (color) {
-      case Image::R: return (*mRCurve)[val];
-      case Image::G: return (*mGCurve)[val];
-      case Image::B: return (*mBCurve)[val];
+      case 0: return (*mRCurve)[val];
+      case 1: return (*mGCurve)[val];
+      case 2: return (*mBCurve)[val];
     }
 
     return 0;
@@ -131,7 +131,7 @@ class PpmImageWriter {
 
     Histogram histogram(image);
 
-    for (Image::Color c = Image::R; c <= Image::B; c++) {
+    for (Image::ColorType c = 0; c <= 2; c++) {
       unsigned int total = 0;
       unsigned int val = 0x1fff;
       while (val > 32) {
@@ -146,37 +146,37 @@ class PpmImageWriter {
   }
 
   void gammaCorrectPixel(
-      const unsigned short (&inRgb)[3], unsigned short (&outRgb)[3],
+      const Image::PixelType& inRgb, Image::PixelType& outRgb,
       const GammaCurve& gammaCurve)
   {
-    outRgb[0] = gammaCurve[inRgb[0]];
-    outRgb[1] = gammaCurve[inRgb[1]];
-    outRgb[2] = gammaCurve[inRgb[2]];
+    outRgb.r = gammaCurve[inRgb.r];
+    outRgb.g = gammaCurve[inRgb.g];
+    outRgb.b = gammaCurve[inRgb.b];
   }
 
-  void writePixel8Bit(const unsigned short (&rgb)[3])
+  void writePixel8Bit(const Image::PixelType& rgb)
   {
-    mOutputStream.sputc(rgb[0] >> 8);
-    mOutputStream.sputc(rgb[1] >> 8);
-    mOutputStream.sputc(rgb[2] >> 8);
+    mOutputStream.sputc(rgb.r >> 8);
+    mOutputStream.sputc(rgb.g >> 8);
+    mOutputStream.sputc(rgb.b >> 8);
   }
 
-  void writePixel16Bit(const unsigned short (&rgb)[3])
+  void writePixel16Bit(const Image::PixelType& rgb)
   {
-    mOutputStream.sputc(rgb[0] >> 8);
-    mOutputStream.sputc(rgb[0] & 0xff);
-    mOutputStream.sputc(rgb[1] >> 8);
-    mOutputStream.sputc(rgb[1] & 0xff);
-    mOutputStream.sputc(rgb[2] >> 8);
-    mOutputStream.sputc(rgb[2] & 0xff);
+    mOutputStream.sputc(rgb.r >> 8);
+    mOutputStream.sputc(rgb.r & 0xff);
+    mOutputStream.sputc(rgb.g >> 8);
+    mOutputStream.sputc(rgb.g & 0xff);
+    mOutputStream.sputc(rgb.b >> 8);
+    mOutputStream.sputc(rgb.b & 0xff);
   }
 
   void writeImageBytes8Bit(const Image& image, const GammaCurve& gammaCurve)
   {
-    unsigned short rgb[3] = { 0, 0, 0 };
+    Image::PixelType rgb;
 
     for (int row = 0; row < image.height(); row++) {
-      Image::ConstRowType pixels(image.constPixelsRow(row));
+      const Image::PixelType* pixels(image.constPixelsAtRow(row));
 
       for (int col = 0; col < image.width(); col++, pixels++) {
         gammaCorrectPixel(pixels[0], rgb, gammaCurve);
@@ -187,10 +187,10 @@ class PpmImageWriter {
 
   void writeImageBytes16Bit(const Image& image, const GammaCurve& gammaCurve)
   {
-    unsigned short rgb[3] = { 0, 0, 0 };
+    Image::PixelType rgb;
 
     for (int row = 0; row < image.height(); row++) {
-      Image::ConstRowType pixels(image.constPixelsRow(row));
+      const Image::PixelType* pixels(image.constPixelsAtRow(row));
 
       for (int col = 0; col < image.width(); col++, pixels++) {
         gammaCorrectPixel(pixels[0], rgb, gammaCurve);
