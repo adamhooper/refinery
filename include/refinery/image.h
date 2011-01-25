@@ -39,22 +39,25 @@ struct Point {
 template<typename T> struct RGBPixel {
   typedef unsigned int ColorType;
   typedef T ValueType;
-  T rgb[3];
+  T rgb[4];
 
   RGBPixel() {
     rgb[0] = 0;
     rgb[1] = 0;
     rgb[2] = 0;
+    rgb[3] = 0;
   }
   template<typename U> RGBPixel(const U (&rhs)[3]) {
     rgb[0] = rhs[0];
     rgb[1] = rhs[1];
     rgb[2] = rhs[2];
+    rgb[3] = 0;
   }
   template<typename U> RGBPixel(const RGBPixel<U>& rhs) {
     rgb[0] = rhs[0];
     rgb[1] = rhs[1];
     rgb[2] = rhs[2];
+    rgb[3] = 0;
   }
   inline const T& r() const {
     return rgb[0];
