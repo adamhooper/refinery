@@ -15,7 +15,7 @@ namespace refinery {
 # elif UINT_MAX == 0xffffffff
   typedef unsigned int    uint_fast32_t;
 # else
-#  error could not define uint_fast32_t
+  typedef unsigned int    uint_fast32_t;
 # endif
 
 /**

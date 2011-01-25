@@ -39,21 +39,46 @@ struct Point {
 template<typename T> struct RGBPixel {
   typedef unsigned int ColorType;
   typedef T ValueType;
-  T r;
-  T g;
-  T b;
+  T rgb[3];
 
-  RGBPixel() : r(0), g(0), b(0) {}
-  RGBPixel(T r, T g, T b) : r(r), g(g), b(b) {}
-  template<typename U> RGBPixel(const U (&rhs)[3])
-    : r(rhs[0]), g(rhs[1]), b(rhs[2]) {}
-  template<typename U> RGBPixel(const RGBPixel<U>& rhs)
-    : r(rhs.r), g(rhs.g), b(rhs.b) {}
+  RGBPixel() {
+    rgb[0] = 0;
+    rgb[1] = 0;
+    rgb[2] = 0;
+  }
+  template<typename U> RGBPixel(const U (&rhs)[3]) {
+    rgb[0] = rhs[0];
+    rgb[1] = rhs[1];
+    rgb[2] = rhs[2];
+  }
+  template<typename U> RGBPixel(const RGBPixel<U>& rhs) {
+    rgb[0] = rhs[0];
+    rgb[1] = rhs[1];
+    rgb[2] = rhs[2];
+  }
+  inline const T& r() const {
+    return rgb[0];
+  }
+  inline const T& g() const {
+    return rgb[1];
+  }
+  inline const T& b() const {
+    return rgb[2];
+  }
+  inline T& r() {
+    return rgb[0];
+  }
+  inline T& g() {
+    return rgb[1];
+  }
+  inline T& b() {
+    return rgb[2];
+  }
   inline T& operator[](const ColorType& index) {
-    return index == 0 ? r : (index == 1 ? g : b);
+    return rgb[index];
   }
   inline const T& at(const ColorType& index) const {
-    return index == 0 ? r : (index == 1 ? g : b);
+    return rgb[index];
   }
 };
 
@@ -70,9 +95,6 @@ template<typename T> struct LABPixel {
     : l(rhs[0]), a(rhs[1]), b(rhs[2]) {}
   template<typename U> LABPixel(const LABPixel<U>& rhs)
     : l(rhs.l), a(rhs.a), b(rhs.b) {}
-  inline T& operator[](const ColorType& index) {
-    return index == 0 ? l : (index == 1 ? a : b);
-  }
 };
 
 template<typename T> struct GrayPixel {

@@ -295,12 +295,12 @@ private:
         Image::ValueType hValue =
           ((pix[-1].value + pix[0].value + pix[1].value) * 2 // G, c, G
            - pix[-2].value - pix[2].value) >> 2; // c, c
-        hPix[0].g = bound(hValue, pix[-1].value, pix[1].value); // G, G
+        hPix[0].g() = bound(hValue, pix[-1].value, pix[1].value); // G, G
 
         Image::ValueType vValue =
           ((pixAbove[0].value + pix[0].value + pixBelow[0].value) * 2 // G, c, G
             - pix2Above[0].value - pix2Below[0].value) >> 2; // c, c
-        vPix[0].g = bound(vValue, pixAbove[0].value, pixBelow[0].value); // G, G
+        vPix[0].g() = bound(vValue, pixAbove[0].value, pixBelow[0].value); // G, G
       }
     }
   }
@@ -336,13 +336,13 @@ private:
     const int colCValue =
         pix[0].value + // G
         ((pixAbove[0].value + pixBelow[0].value // colC, colC
-          - dPixAbove[0].g - dPixBelow[0].g) >> 1); // G, G
+          - dPixAbove[0].g() - dPixBelow[0].g()) >> 1); // G, G
     dPix[0][colC] = clamp16(colCValue);
 
     const int rowCValue =
         pix[0].value + // G
         ((pix[-1].value + pix[1].value // rowC, rowC
-          - dPix[-1].g - dPix[1].g) >> 1); // G, G
+          - dPix[-1].g() - dPix[1].g()) >> 1); // G, G
     dPix[0][rowC] = clamp16(rowCValue);
   }
 
@@ -355,11 +355,11 @@ private:
       const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        dPix[0].g + // G
+        dPix[0].g() + // G
         ((pixAbove[-1].value + pixAbove[1].value // colC, colC
           + pixBelow[-1].value + pixBelow[1].value // colC, colC
-          - dPixAbove[-1].g - dPixAbove[1].g // G, G
-          - dPixBelow[-1].g - dPixBelow[1].g // G, G
+          - dPixAbove[-1].g() - dPixAbove[1].g() // G, G
+          - dPixBelow[-1].g() - dPixBelow[1].g() // G, G
           + 1) >> 2);
     dPix[0][colC] = clamp16(colCValue);
   }
@@ -418,7 +418,7 @@ private:
       const GrayImage::PixelType* pixBelow(&pix[width]);
 
       for (unsigned int col = left + (c != G); col < right; col += 2) {
-        dPix[0].g = pix[0].value; // see comment in createGreenDirectionalImages
+        dPix[0].g() = pix[0].value; // see createGreenDirectionalImages comment
 
         fillRandBinGPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -451,17 +451,17 @@ private:
       const float (&cameraToXyz)[3][4])
   {
     float cbrtX = xyz64Cbrt(0.5f
-        + cameraToXyz[0][0] * rgb.r
-        + cameraToXyz[0][1] * rgb.g
-        + cameraToXyz[0][2] * rgb.b);
+        + cameraToXyz[0][0] * rgb.r()
+        + cameraToXyz[0][1] * rgb.g()
+        + cameraToXyz[0][2] * rgb.b());
     float cbrtY = xyz64Cbrt(0.5f
-        + cameraToXyz[1][0] * rgb.r
-        + cameraToXyz[1][1] * rgb.g
-        + cameraToXyz[1][2] * rgb.b);
+        + cameraToXyz[1][0] * rgb.r()
+        + cameraToXyz[1][1] * rgb.g()
+        + cameraToXyz[1][2] * rgb.b());
     float cbrtZ = xyz64Cbrt(0.5f
-        + cameraToXyz[2][0] * rgb.r
-        + cameraToXyz[2][1] * rgb.g
-        + cameraToXyz[2][2] * rgb.b);
+        + cameraToXyz[2][0] * rgb.r()
+        + cameraToXyz[2][1] * rgb.g()
+        + cameraToXyz[2][2] * rgb.b());
 
     lab.l = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
     lab.a = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
@@ -628,9 +628,9 @@ private:
         } else if (homoPix[0].diff < 0) {
           pix[0] = vPix[0];
         } else {
-          pix[0].r = (hPix[0].r + vPix[0].r) >> 1;
-          pix[0].g = (hPix[0].g + vPix[0].g) >> 1;
-          pix[0].b = (hPix[0].b + vPix[0].b) >> 1;
+          pix[0].r() = (hPix[0].r() + vPix[0].r()) >> 1;
+          pix[0].g() = (hPix[0].g() + vPix[0].g()) >> 1;
+          pix[0].b() = (hPix[0].b() + vPix[0].b()) >> 1;
         }
       }
     }

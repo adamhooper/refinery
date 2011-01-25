@@ -73,16 +73,16 @@ TEST(InterpolatorTest, AHDInterpolate) {
 
       const refinery::Image::PixelType p(image.constPixelAtPoint(row, col));
       if (nFailures < 3) {
-        EXPECT_EQ(refPixel.r, p.r) << "(" << row << ", " << col << ")";
-        EXPECT_EQ(refPixel.g, p.g) << "(" << row << ", " << col << ")";
-        EXPECT_EQ(refPixel.b, p.b) << "(" << row << ", " << col << ")";
-        if (refPixel.r != p.r || refPixel.g != p.g || refPixel.b != p.b) {
+        EXPECT_EQ(refPixel.r, p.r()) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.g, p.g()) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.b, p.b()) << "(" << row << ", " << col << ")";
+        if (refPixel.r != p.r() || refPixel.g != p.g() || refPixel.b != p.b()) {
           nFailures++;
         }
       } else {
-        ASSERT_EQ(refPixel.r, p.r);
-        ASSERT_EQ(refPixel.g, p.g);
-        ASSERT_EQ(refPixel.b, p.b);
+        ASSERT_EQ(refPixel.r, p.r());
+        ASSERT_EQ(refPixel.g, p.g());
+        ASSERT_EQ(refPixel.b, p.b());
       }
     }
   }

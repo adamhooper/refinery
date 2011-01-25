@@ -103,14 +103,14 @@ TEST(ImageReaderTest, Ppm16Bit) {
 
   // Spot-check
   const refinery::Image::PixelType pixel0_0(image.constPixelAtPoint(0, 0));
-  EXPECT_EQ(209, pixel0_0.r);
-  EXPECT_EQ(357, pixel0_0.g);
-  EXPECT_EQ(237, pixel0_0.b);
+  EXPECT_EQ(209, pixel0_0.r());
+  EXPECT_EQ(357, pixel0_0.g());
+  EXPECT_EQ(237, pixel0_0.b());
 
   const refinery::Image::PixelType pixel74_224(image.constPixelAtPoint(74, 224));
-  EXPECT_EQ(360, pixel74_224.r);
-  EXPECT_EQ(664, pixel74_224.g);
-  EXPECT_EQ(588, pixel74_224.b);
+  EXPECT_EQ(360, pixel74_224.r());
+  EXPECT_EQ(664, pixel74_224.g());
+  EXPECT_EQ(588, pixel74_224.b());
 }
 
 } // namespace

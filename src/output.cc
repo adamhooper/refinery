@@ -91,9 +91,9 @@ class Histogram {
       const Image::PixelType* pixels(image.constPixelsAtRow(row));
 
       for (int col = 0; col < image.width(); col++, pixels++) {
-        rCurve[pixels[0].r >> 3]++;
-        gCurve[pixels[0].g >> 3]++;
-        bCurve[pixels[0].b >> 3]++;
+        rCurve[pixels[0].r() >> 3]++;
+        gCurve[pixels[0].g() >> 3]++;
+        bCurve[pixels[0].b() >> 3]++;
       }
     }
   }
@@ -149,26 +149,26 @@ class PpmImageWriter {
       const Image::PixelType& inRgb, Image::PixelType& outRgb,
       const GammaCurve& gammaCurve)
   {
-    outRgb.r = gammaCurve[inRgb.r];
-    outRgb.g = gammaCurve[inRgb.g];
-    outRgb.b = gammaCurve[inRgb.b];
+    outRgb.r() = gammaCurve[inRgb.r()];
+    outRgb.g() = gammaCurve[inRgb.g()];
+    outRgb.b() = gammaCurve[inRgb.b()];
   }
 
   void writePixel8Bit(const Image::PixelType& rgb)
   {
-    mOutputStream.sputc(rgb.r >> 8);
-    mOutputStream.sputc(rgb.g >> 8);
-    mOutputStream.sputc(rgb.b >> 8);
+    mOutputStream.sputc(rgb.r() >> 8);
+    mOutputStream.sputc(rgb.g() >> 8);
+    mOutputStream.sputc(rgb.b() >> 8);
   }
 
   void writePixel16Bit(const Image::PixelType& rgb)
   {
-    mOutputStream.sputc(rgb.r >> 8);
-    mOutputStream.sputc(rgb.r & 0xff);
-    mOutputStream.sputc(rgb.g >> 8);
-    mOutputStream.sputc(rgb.g & 0xff);
-    mOutputStream.sputc(rgb.b >> 8);
-    mOutputStream.sputc(rgb.b & 0xff);
+    mOutputStream.sputc(rgb.r() >> 8);
+    mOutputStream.sputc(rgb.r() & 0xff);
+    mOutputStream.sputc(rgb.g() >> 8);
+    mOutputStream.sputc(rgb.g() & 0xff);
+    mOutputStream.sputc(rgb.b() >> 8);
+    mOutputStream.sputc(rgb.b() & 0xff);
   }
 
   void writeImageBytes8Bit(const Image& image, const GammaCurve& gammaCurve)

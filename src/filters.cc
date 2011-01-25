@@ -99,9 +99,9 @@ namespace {
           RGBPixel<float> rgb;
           converter.convert(pixels[0], rgb);
 
-          pixels[0][0] = clamp16(rgb.r);
-          pixels[0][1] = clamp16(rgb.g);
-          pixels[0][2] = clamp16(rgb.b);
+          pixels[0][0] = clamp16(rgb.r());
+          pixels[0][1] = clamp16(rgb.g());
+          pixels[0][2] = clamp16(rgb.b());
         }
       }
     }
