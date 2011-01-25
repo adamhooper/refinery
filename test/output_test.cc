@@ -28,7 +28,7 @@ TEST(ImageWriterTest, WritePpm16Bit) {
   refinery::ImageReader reader;
   refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
+      reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
@@ -58,7 +58,7 @@ TEST(ImageWriterTest, WritePpm8Bit) {
 
   refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
+      reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
   refinery::Image& image(*imagePtr);
 
   // Now we have "image" so the test can begin.

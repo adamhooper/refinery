@@ -5,18 +5,14 @@
 
 namespace refinery {
 
-template<typename T> class RGBPixel;
-template<typename T> class TypedImage;
-typedef TypedImage<RGBPixel<unsigned short> > Image;
-
 class ScaleColorsFilter {
 public:
-  void filter(Image& image);
+  template<typename T> void filter(T& image);
 };
 
 class ConvertToRgbFilter {
 public:
-  void filter(Image& image);
+  template<typename T> void filter(T& image);
 };
 
 } // namespace refinery

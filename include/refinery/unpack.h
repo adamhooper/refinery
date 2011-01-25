@@ -8,8 +8,10 @@ namespace refinery {
 
 class ExifData;
 
-template<typename T> class RGBPixel;
 template<typename T> class TypedImage;
+template<typename T> class GrayPixel;
+typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
+template<typename T> class RGBPixel;
 typedef TypedImage<RGBPixel<unsigned short> > Image;
 
 class ImageReader {
@@ -24,8 +26,15 @@ public:
    * Exiv2::ExifImage. A notable exception is PPM: if you read an
    * image/x-portable-pixmap file the width and height will be ignored. You
    * must still pass in an ExifData& though.
+   *
+   * FIXME: readRgbImage() only makes sense for PPM (or some unusual RAW files).
+   * Clarify API.
    */
-  Image* readImage(
+  GrayImage* readGrayImage(
+      std::streambuf& istream, const char* mimeType,
+      int width, int height, const ExifData& exifData);
+
+  Image* readRgbImage(
       std::streambuf& istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
 };

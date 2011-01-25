@@ -64,15 +64,16 @@ int main(int argc, char **argv)
   int height = exivImage->pixelHeight();
   const char* mimeType = exivImage->mimeType().c_str();
 
-  std::auto_ptr<Image> imagePtr(
-      reader.readImage(fb, mimeType, width, height, exifData));
-  Image& image(*imagePtr);
+  std::auto_ptr<GrayImage> grayImagePtr(
+      reader.readGrayImage(fb, mimeType, width, height, exifData));
 
   ScaleColorsFilter scaleFilter;
-  scaleFilter.filter(image);
+  scaleFilter.filter(*grayImagePtr);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);
-  interpolator.interpolate(image);
+  std::auto_ptr<Image> imagePtr(interpolator.interpolate(*grayImagePtr));
+
+  Image& image(*imagePtr);
 
   ConvertToRgbFilter rgbFilter;
   rgbFilter.filter(image);

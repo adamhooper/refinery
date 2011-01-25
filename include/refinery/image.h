@@ -83,6 +83,9 @@ template<typename T> struct GrayPixel {
   GrayPixel() : value(0) {}
   GrayPixel(T value) : value(value) {}
   template<typename U> GrayPixel(const GrayPixel<U>& rhs) : value(rhs.value) {}
+  GrayPixel& operator*(double rhs) {
+    return GrayPixel(value * rhs);
+  }
 };
 
 template<typename T> class TypedImage {
@@ -96,7 +99,7 @@ private:
   CameraData mCameraData;
   int mWidth;
   int mHeight;
-  int mBpp; /* bytes per pixel */
+  int mBpp; /* bytes per pixel--BAD! Don't rely on this! */
   int mFilters;
   PixelsType mPixels;
 
@@ -132,6 +135,7 @@ public:
 
   const PixelType* constPixels() const { return &mPixels[0]; }
   PixelType* pixels() { return &mPixels[0]; }
+  PixelType* pixelsEnd() { return &mPixels[mWidth * mHeight]; }
 
   const PixelType* constPixelsAtRow(int row) const {
     return &mPixels[row * mWidth];
@@ -148,13 +152,14 @@ public:
   PixelType* pixelsAtPoint(unsigned int row, unsigned int col) {
     return pixelsAtPoint(Point(row, col));
   }
-  const PixelType* constPixelsAtPoint(const Point& point) {
+  const PixelType* constPixelsAtPoint(const Point& point) const {
     int row = point.row;
     int col = point.col;
     return &mPixels[row * mWidth + col];
   }
-  const PixelType* constPixelsAtPoint(unsigned int row, unsigned int col) {
-    return pixelsAtPoint(Point(row, col));
+  const PixelType* constPixelsAtPoint(
+      unsigned int row, unsigned int col) const {
+    return constPixelsAtPoint(Point(row, col));
   }
 
   PixelType& pixelAtPoint(const Point& point) {
@@ -163,10 +168,10 @@ public:
   PixelType& pixelAtPoint(unsigned int row, unsigned int col) {
     return *pixelsAtPoint(row, col);
   }
-  const PixelType& constPixelAtPoint(const Point& point) {
+  const PixelType& constPixelAtPoint(const Point& point) const {
     return *constPixelsAtPoint(point);
   }
-  const PixelType& constPixelAtPoint(unsigned int row, unsigned int col) {
+  const PixelType& constPixelAtPoint(unsigned int row, unsigned int col) const {
     return *constPixelsAtPoint(row, col);
   }
 };

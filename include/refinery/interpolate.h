@@ -5,9 +5,11 @@
 
 namespace refinery {
 
-template<typename T> class RGBPixel;
 template<typename T> class TypedImage;
+template<typename T> class RGBPixel;
 typedef TypedImage<RGBPixel<unsigned short> > Image;
+template<typename T> class GrayPixel;
+typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
 
 class Interpolator {
 public:
@@ -22,7 +24,7 @@ private:
 public:
   Interpolator(const Type& type);
 
-  void interpolate(Image& image);
+  Image* interpolate(const GrayImage& image);
 };
 
 } /* namespace */

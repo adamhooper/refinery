@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <memory>
 
 #include "refinery/interpolate.h"
 
@@ -23,15 +24,15 @@ TEST(InterpolatorTest, AHDInterpolate) {
   refinery::CameraData cameraData(
       refinery::CameraDataFactory::instance().getCameraData(exifData));
 
-  refinery::Image image(cameraData, 225, 75);
-  image.setBytesPerPixel(3);
-  image.setFilters(0x61616161);
+  refinery::GrayImage grayImage(cameraData, 225, 75);
+  grayImage.setFilters(0x61616161);
   std::copy(
-      &nikon_d5000_225x75_sample[0], &nikon_d5000_225x75_sample[225*75*3],
-      reinterpret_cast<unsigned short*>(image.pixels()));
+      &nikon_d5000_225x75_sample[0], &nikon_d5000_225x75_sample[225*75],
+      reinterpret_cast<unsigned short*>(grayImage.pixels()));
 
   refinery::Interpolator interpolator(refinery::Interpolator::INTERPOLATE_AHD);
-  interpolator.interpolate(image);
+  std::auto_ptr<refinery::Image> imagePtr(interpolator.interpolate(grayImage));
+  const refinery::Image& image(*imagePtr);
 
   refinery::Image ref(cameraData, 225, 75);
   ref.setBytesPerPixel(3);
@@ -70,18 +71,18 @@ TEST(InterpolatorTest, AHDInterpolate) {
           static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
           | static_cast<unsigned char>(lsb);
 
-      refinery::Image::PixelType p(image.pixelAtPoint(refinery::Point(row, col)));
+      const refinery::Image::PixelType p(image.constPixelAtPoint(row, col));
       if (nFailures < 3) {
-        EXPECT_EQ(refPixel.r, p[0]) << "(" << row << ", " << col << ")";
-        EXPECT_EQ(refPixel.g, p[1]) << "(" << row << ", " << col << ")";
-        EXPECT_EQ(refPixel.b, p[2]) << "(" << row << ", " << col << ")";
-        if (refPixel.r != p[0] || refPixel.g != p[1] || refPixel.b != p[2]) {
+        EXPECT_EQ(refPixel.r, p.r) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.g, p.g) << "(" << row << ", " << col << ")";
+        EXPECT_EQ(refPixel.b, p.b) << "(" << row << ", " << col << ")";
+        if (refPixel.r != p.r || refPixel.g != p.g || refPixel.b != p.b) {
           nFailures++;
         }
       } else {
-        ASSERT_EQ(refPixel.r, p[0]);
-        ASSERT_EQ(refPixel.g, p[1]);
-        ASSERT_EQ(refPixel.b, p[2]);
+        ASSERT_EQ(refPixel.r, p.r);
+        ASSERT_EQ(refPixel.g, p.g);
+        ASSERT_EQ(refPixel.b, p.b);
       }
     }
   }

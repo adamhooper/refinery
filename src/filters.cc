@@ -7,11 +7,19 @@
 namespace refinery {
 
 namespace {
+  template<typename T>
   class ScaleColorsFilterImpl {
-    Image& mImage;
+  public:
+    typedef T ImageType;
+    typedef typename ImageType::ColorType ColorType;
+    typedef typename ImageType::PixelType PixelType;
+    typedef typename ImageType::ValueType ValueType;
+
+  private:
+    ImageType& mImage;
     const CameraData& mCameraData;
 
-    Image::ValueType clamp16(int val) {
+    ValueType clamp16(int val) {
       if (val < 0) return 0;
       if (val > 0xffff) return 0xffff;
       return val;
@@ -23,7 +31,7 @@ namespace {
     }
 
   public:
-    ScaleColorsFilterImpl(Image& image)
+    ScaleColorsFilterImpl(ImageType& image)
         : mImage(image), mCameraData(image.cameraData()) {}
 
     void filter() {
@@ -33,25 +41,38 @@ namespace {
       const unsigned int width(mImage.width());
 
       for (unsigned int row = 0; row < height; row++) {
-        Image::PixelType* pix(&mImage.pixelsAtRow(row)[0]);
+        PixelType* pix(mImage.pixelsAtRow(row));
+        const PixelType* lastPixel(mImage.constPixelsAtPoint(row, width - 1));
 
-        Image::ColorType c = mImage.colorAtPoint(Point(row, 0));
-        double multiplier = colorData.scalingMultipliers[c];
-        for (unsigned int col = 0; col < width; col += 2) {
-          pix[col][c] = clamp16(multiplier * pix[col][c]);
+        Image::ColorType c1 = mImage.colorAtPoint(Point(row, 0));
+        Image::ColorType c2 = mImage.colorAtPoint(Point(row, 1));
+
+        double multiplier1 = colorData.scalingMultipliers[c1];
+        double multiplier2 = colorData.scalingMultipliers[c2];
+
+        while (pix < lastPixel) {
+          pix->value = clamp16(multiplier1 * pix->value);
+          pix++;
+          pix->value = clamp16(multiplier2 * pix->value);
+          pix++;
         }
-
-        c = mImage.colorAtPoint(Point(row, 1));
-        multiplier = colorData.scalingMultipliers[c];
-        for (unsigned int col = 1; col < width; col += 2) {
-          pix[col][c] = clamp16(multiplier * pix[col][c]);
+        if (pix == lastPixel) {
+          pix->value = clamp16(multiplier1 * pix->value);
         }
       }
     }
   };
 
+  template<typename T>
   class ConvertToRgbFilterImpl {
-    Image& mImage;
+  public:
+    typedef T ImageType;
+    typedef typename ImageType::ColorType ColorType;
+    typedef typename ImageType::PixelType PixelType;
+    typedef typename ImageType::ValueType ValueType;
+
+  private:
+    ImageType& mImage;
     const CameraData& mCameraData;
 
     unsigned short clamp16(int val) {
@@ -61,7 +82,7 @@ namespace {
     }
 
   public:
-    ConvertToRgbFilterImpl(Image& image)
+    ConvertToRgbFilterImpl(ImageType& image)
         : mImage(image), mCameraData(image.cameraData()) {}
 
     void filter() {
@@ -73,7 +94,7 @@ namespace {
       const unsigned int width(mImage.width());
 
       for (unsigned int row = 0; row < height; row++) {
-        Image::PixelType* pixels(mImage.pixelsAtRow(row));
+        PixelType* pixels(mImage.pixelsAtRow(row));
         for (unsigned int col = 0; col < width; col++, pixels++) {
           RGBPixel<float> rgb;
           converter.convert(pixels[0], rgb);
@@ -87,16 +108,24 @@ namespace {
   };
 } // namespace {}
 
-void ScaleColorsFilter::filter(Image& image)
+template<typename T>
+void ScaleColorsFilter::filter(T& image)
 {
-  ScaleColorsFilterImpl impl(image);
+  ScaleColorsFilterImpl<T> impl(image);
   impl.filter();
 }
 
-void ConvertToRgbFilter::filter(Image& image)
+template<typename T>
+void ConvertToRgbFilter::filter(T& image)
 {
-  ConvertToRgbFilterImpl impl(image);
+  ConvertToRgbFilterImpl<T> impl(image);
   impl.filter();
 }
+
+// Instantiate the ones we need... (hack-ish)
+template void ScaleColorsFilter::filter<GrayImage>(GrayImage&);
+template class ScaleColorsFilterImpl<GrayImage>;
+template void ConvertToRgbFilter::filter<RGBImage>(RGBImage&);
+template class ConvertToRgbFilterImpl<RGBImage>;
 
 };

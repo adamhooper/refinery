@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 
 #include "refinery/camera.h"
 #include "refinery/image.h"
@@ -11,7 +12,7 @@
 namespace refinery {
 
 namespace {
-  void interpolateBorder(Image& image, int border) {
+  void interpolateBorder(Image& rgbImage, const GrayImage& image, int border) {
     const int width = image.width(), height = image.height();
     const int top = 0, left = 0, right = width, bottom = height;
 
@@ -32,7 +33,7 @@ namespace {
 
             Point p(y, x);
             Image::ColorType c = image.colorAtPoint(p);
-            sum[c] += image.pixelAtPoint(p)[c];
+            sum[c] += image.constPixelAtPoint(p).value;
             count[c]++;
           }
         }
@@ -40,8 +41,11 @@ namespace {
         Point curP(row, col);
         Image::ColorType curC = image.colorAtPoint(curP);
         for (Image::ColorType c = 0; c < 4; c++) {
-          if (c != curC && count[c]) {
-            image.pixelAtPoint(curP)[c] = sum[c] / count[c];
+          if (c == curC) {
+            rgbImage.pixelAtPoint(curP)[c] =
+                image.constPixelAtPoint(curP).value;
+          } else if (count[c]) {
+            rgbImage.pixelAtPoint(curP)[c] = sum[c] / count[c];
           }
         }
       }
@@ -61,7 +65,7 @@ class BilinearInterpolator {
     PixelInstructions pixels[16][16];
 
     public:
-    PixelsInstructions(const Image& image)
+    PixelsInstructions(const GrayImage& image)
     {
       for (unsigned int row = 0; row < 16; row++) {
         for (unsigned int col = 0; col < 16; col++) {
@@ -107,8 +111,12 @@ class BilinearInterpolator {
   };
 
 public:
-  void interpolate(Image& image) {
-    interpolateBorder(image, 1);
+  Image* interpolate(const GrayImage& image) {
+    std::auto_ptr<Image> rgbImagePtr(
+        new Image(image.cameraData(), image.width(), image.height()));
+    Image& rgbImage(*rgbImagePtr);
+
+    interpolateBorder(rgbImage, image, 1);
 
     const unsigned int width = image.width();
     const unsigned int height = image.height();
@@ -124,8 +132,10 @@ public:
     const PixelsInstructions pixelsInstructions(image);
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::PixelType* pix(&image.pixelsAtRow(row)[left]);
-      for (unsigned int col = left; col < right; col++, pix++) {
+      Image::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
+      const GrayImage::PixelType* grayPix(image.constPixelsAtPoint(row, left));
+
+      for (unsigned int col = left; col < right; col++, pix++, grayPix++) {
         const PixelInstructions& instructions(
             pixelsInstructions.getPixelInstructions(row, col));
 
@@ -137,7 +147,7 @@ public:
           const unsigned int adjColor = instructions.adjacentColors[adjIndex];
 
           sums[adjColor] +=
-              static_cast<unsigned int>(pix[adjOffset][adjColor]) << adjWeight;
+              static_cast<unsigned int>(grayPix[adjOffset].value) << adjWeight;
         }
 
         for (unsigned int colorIndex = 0; colorIndex < 2; colorIndex++) {
@@ -149,6 +159,8 @@ public:
         }
       }
     }
+
+    return rgbImagePtr.release();
   }
 };
 
@@ -245,8 +257,16 @@ private:
       );
   }
 
+  /*
+   * Make G values from hImageTile and vImageTile be the approximated Gs we
+   * get after looking at original grayscale image.
+   *
+   * The final image will have a checkerboard pattern of G estimates. The
+   * original image's G pixels aren't copied (that'll happen later, only so we
+   * get a tiny speedup).
+   */
   void createGreenDirectionalImages(
-      const Image& image, ImageTile& hImageTile, ImageTile& vImageTile)
+      const GrayImage& image, ImageTile& hImageTile, ImageTile& vImageTile)
   {
     const unsigned int top = hImageTile.top();
     const unsigned int left = hImageTile.left();
@@ -259,30 +279,28 @@ private:
       unsigned int col =
           left + (image.colorAtPoint(Point(row, left)) & 1); // 1st R or B
 
-      const Image::PixelType* pix(&image.constPixelsAtRow(row)[col]);
+      const GrayImage::PixelType* pix(image.constPixelsAtPoint(row, col));
 
-      const Image::PixelType* pixAbove(&pix[-width]);
-      const Image::PixelType* pix2Above(&pix[-2 * width]);
-      const Image::PixelType* pixBelow(&pix[width]);
-      const Image::PixelType* pix2Below(&pix[2 * width]);
+      const GrayImage::PixelType* pixAbove(&pix[-width]);
+      const GrayImage::PixelType* pix2Above(&pix[-2 * width]);
+      const GrayImage::PixelType* pixBelow(&pix[width]);
+      const GrayImage::PixelType* pix2Below(&pix[2 * width]);
 
-      ImageTile::PixelType* hPix(&hImageTile.pixelsAtImageCoords(row, col)[0]);
-      ImageTile::PixelType* vPix(&vImageTile.pixelsAtImageCoords(row, col)[0]);
-
-      Color c(image.colorAtPoint(Point(row, col)));
+      ImageTile::PixelType* hPix(hImageTile.pixelsAtImageCoords(row, col));
+      ImageTile::PixelType* vPix(vImageTile.pixelsAtImageCoords(row, col));
 
       for (; col < right;
           col += 2, pix += 2, hPix += 2, vPix += 2,
           pixAbove += 2, pix2Above += 2, pixBelow += 2, pix2Below += 2) {
         Image::ValueType hValue =
-          ((pix[-1].g + pix[0].at(c) + pix[1].g) * 2
-           - pix[-2].at(c) - pix[2].at(c)) >> 2;
-        hPix[0].g = bound(hValue, pix[-1].g, pix[1].g);
+          ((pix[-1].value + pix[0].value + pix[1].value) * 2 // G, c, G
+           - pix[-2].value - pix[2].value) >> 2; // c, c
+        hPix[0].g = bound(hValue, pix[-1].value, pix[1].value); // G, G
 
         Image::ValueType vValue =
-          ((pixAbove[0].g + pix[0].at(c) + pixBelow[0].g) * 2
-            - pix2Above[0].at(c) - pix2Below[0].at(c)) >> 2;
-        vPix[0].g = bound(vValue, pixAbove[0].g, pixBelow[0].g);
+          ((pixAbove[0].value + pix[0].value + pixBelow[0].value) * 2 // G, c, G
+            - pix2Above[0].value - pix2Below[0].value) >> 2; // c, c
+        vPix[0].g = bound(vValue, pixAbove[0].value, pixBelow[0].value); // G, G
       }
     }
   }
@@ -294,8 +312,9 @@ private:
   }
 
   inline void incrPointers(
-      int n, const Image::PixelType* (&pix),
-      const Image::PixelType* (&pixAbove), const Image::PixelType* (&pixBelow),
+      int n, const GrayImage::PixelType* (&pix),
+      const GrayImage::PixelType* (&pixAbove),
+      const GrayImage::PixelType* (&pixBelow),
       const ImageTile::PixelType* (&dPixAbove),
       const ImageTile::PixelType* (&dPixBelow))
   {
@@ -307,43 +326,45 @@ private:
   }
 
   inline void fillRandBinGPixel(
-      ImageTile::PixelType* dPix, const Color& rowC, const Color& colC,
-      const Image::PixelType* pix,
-      const Image::PixelType* pixAbove, const Image::PixelType* pixBelow,
+      ImageTile::PixelType* dPix, const Color rowC, const Color colC,
+      const GrayImage::PixelType* pix,
+      const GrayImage::PixelType* pixAbove,
+      const GrayImage::PixelType* pixBelow,
       const ImageTile::PixelType* dPixAbove,
       const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        pix[0].g +
-        ((pixAbove[0].at(colC) + pixBelow[0].at(colC)
-          - dPixAbove[0].g - dPixBelow[0].g) >> 1);
+        pix[0].value + // G
+        ((pixAbove[0].value + pixBelow[0].value // colC, colC
+          - dPixAbove[0].g - dPixBelow[0].g) >> 1); // G, G
     dPix[0][colC] = clamp16(colCValue);
 
     const int rowCValue =
-        pix[0].g +
-        ((pix[-1].at(rowC) + pix[1].at(rowC) - dPix[-1].g - dPix[1].g)
-          >> 1);
+        pix[0].value + // G
+        ((pix[-1].value + pix[1].value // rowC, rowC
+          - dPix[-1].g - dPix[1].g) >> 1); // G, G
     dPix[0][rowC] = clamp16(rowCValue);
   }
 
   inline void fillRandBinBorRPixel(
-      ImageTile::PixelType* dPix, const Color& rowC, const Color& colC,
-      const Image::PixelType* pix,
-      const Image::PixelType* pixAbove, const Image::PixelType* pixBelow,
+      ImageTile::PixelType* dPix, const Color rowC, const Color colC,
+      const GrayImage::PixelType* pix,
+      const GrayImage::PixelType* pixAbove,
+      const GrayImage::PixelType* pixBelow,
       const ImageTile::PixelType* dPixAbove,
       const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        dPix[0].g +
-        ((pixAbove[-1].at(colC) + pixAbove[1].at(colC)
-          + pixBelow[-1].at(colC) + pixBelow[1].at(colC)
-          - dPixAbove[-1].g - dPixAbove[1].g
-          - dPixBelow[-1].g - dPixBelow[1].g
+        dPix[0].g + // G
+        ((pixAbove[-1].value + pixAbove[1].value // colC, colC
+          + pixBelow[-1].value + pixBelow[1].value // colC, colC
+          - dPixAbove[-1].g - dPixAbove[1].g // G, G
+          - dPixBelow[-1].g - dPixBelow[1].g // G, G
           + 1) >> 2);
     dPix[0][colC] = clamp16(colCValue);
   }
 
-  void fillDirectionalImage(const Image& image, ImageTile& dirImageTile)
+  void fillDirectionalImage(const GrayImage& image, ImageTile& dirImageTile)
   {
     const unsigned int top = dirImageTile.top() + 1;
     const unsigned int left = dirImageTile.left() + 1;
@@ -391,12 +412,13 @@ private:
       const ImageTile::PixelType* dPixAbove(&dPix[-dWidth]);
       const ImageTile::PixelType* dPixBelow(&dPix[dWidth]);
 
-      const Image::PixelType* pix(&image.constPixelsAtRow(row)[left + (c != G)]);
-      const Image::PixelType* pixAbove(&pix[-width]);
-      const Image::PixelType* pixBelow(&pix[width]);
+      const GrayImage::PixelType* pix(
+          image.constPixelsAtPoint(row, left + (c != G)));
+      const GrayImage::PixelType* pixAbove(&pix[-width]);
+      const GrayImage::PixelType* pixBelow(&pix[width]);
 
       for (unsigned int col = left + (c != G); col < right; col += 2) {
-        dPix[0].g = pix[0].g;
+        dPix[0].g = pix[0].value; // see comment in createGreenDirectionalImages
 
         fillRandBinGPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -404,7 +426,7 @@ private:
         incrPointers(2, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
       }
 
-      dPix = &dirImageTile.pixelsAtImageCoords(row, left + (c == G))[0];
+      dPix = dirImageTile.pixelsAtImageCoords(row, left + (c == G));
       dPixAbove = &dPix[-dWidth];
       dPixBelow = &dPix[dWidth];
 
@@ -413,7 +435,7 @@ private:
       pixBelow = &pix[width];
 
       for (unsigned int col = left + (c == G); col < right; col += 2) {
-        dPix[0][rowC] = pix[0].at(rowC);
+        dPix[0][rowC] = pix[0].value;
 
         fillRandBinBorRPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -556,8 +578,8 @@ private:
     }
   }
 
-  void refillImage(
-      Image& image, const ImageTile& hImageTile, const ImageTile& vImageTile,
+  void fillImage(
+      Image& rgbImage, const ImageTile& hImageTile, const ImageTile& vImageTile,
       HomogeneityTile& homoTile)
   {
     const unsigned int top = hImageTile.top() + 3;
@@ -590,14 +612,14 @@ private:
     }
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::PixelType* pix(&image.pixelsAtRow(row)[left]);
+      Image::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
 
       const HomogeneityTile::PixelType* homoPix(
-          &homoTile.constPixelsAtImageCoords(row, left)[0]);
+          homoTile.constPixelsAtImageCoords(row, left));
       const ImageTile::PixelType* hPix(
-          &hImageTile.constPixelsAtImageCoords(row, left)[0]);
+          hImageTile.constPixelsAtImageCoords(row, left));
       const ImageTile::PixelType* vPix(
-          &vImageTile.constPixelsAtImageCoords(row, left)[0]);
+          vImageTile.constPixelsAtImageCoords(row, left));
 
       for (unsigned int col = left; col < right;
           col++, pix++, hPix++, vPix++, homoPix++) {
@@ -615,7 +637,7 @@ private:
   }
 
 public:
-  void interpolate(Image& image) {
+  Image* interpolate(const GrayImage& image) {
     const unsigned int border = 5;
 
     const Camera::ColorConversionData colorData(
@@ -628,7 +650,11 @@ public:
       }
     }
 
-    interpolateBorder(image, border);
+    std::auto_ptr<Image> rgbImagePtr(new Image(
+          image.cameraData(), image.width(), image.height()));
+    Image& rgbImage(*rgbImagePtr);
+
+    interpolateBorder(rgbImage, image, border);
 
     const unsigned int height = image.height();
     const unsigned int width = image.width();
@@ -684,10 +710,12 @@ public:
 
           fillHomogeneityMap(hLabImageTile, vLabImageTile, homoTile);
 
-          refillImage(image, hImageTile, vImageTile, homoTile);
+          fillImage(rgbImage, hImageTile, vImageTile, homoTile);
         }
       }
     }
+
+    return rgbImagePtr.release();
   }
 };
 
@@ -696,20 +724,18 @@ Interpolator::Interpolator(const Interpolator::Type& type)
 {
 }
 
-void Interpolator::interpolate(Image& image)
+Image* Interpolator::interpolate(const GrayImage& image)
 {
   switch (mType) {
     case INTERPOLATE_AHD:
       {
         AHDInterpolator ahdInterpolator;
-        ahdInterpolator.interpolate(image);
-        break;
+        return ahdInterpolator.interpolate(image);
       }
     case INTERPOLATE_BILINEAR:
       {
         BilinearInterpolator bilinearInterpolator;
-        bilinearInterpolator.interpolate(image);
-        break;
+        return bilinearInterpolator.interpolate(image);
       }
   }
 }

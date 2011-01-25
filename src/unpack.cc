@@ -14,7 +14,10 @@ namespace unpack {
 
   class Unpacker {
   public:
-    virtual Image* unpackImage(
+    virtual GrayImage* unpackGrayImage(
+        std::streambuf& is, int width, int height,
+        const ExifData& exifData) = 0;
+    virtual Image* unpackRgbImage(
         std::streambuf& is, int width, int height,
         const ExifData& exifData) = 0;
   };
@@ -70,7 +73,7 @@ namespace unpack {
     }
 
   public:
-    virtual Image* unpackImage(
+    virtual Image* unpackRgbImage(
         std::streambuf& is, int width, int height, const ExifData& exifData)
     {
       // This will give a NullCamera
@@ -97,6 +100,12 @@ namespace unpack {
       }
 
       return image.release();
+    }
+
+    virtual GrayImage* unpackGrayImage(
+        std::streambuf& is, int width, int height, const ExifData& exifData)
+    {
+      return 0;
     }
   };
 
@@ -277,7 +286,7 @@ namespace unpack {
     }
 
   public:
-    virtual Image* unpackImage(
+    virtual GrayImage* unpackGrayImage(
         std::streambuf& is, int width, int height, const ExifData& exifData)
     {
       CameraData cameraData(
@@ -302,8 +311,9 @@ namespace unpack {
 
       is.pubseekoff(getDataOffset(exifData), std::ios::beg);
 
-      std::auto_ptr<Image> imagePtr(new Image(cameraData, width, height));
-      Image& image(*imagePtr);
+      std::auto_ptr<GrayImage> imagePtr(
+          new GrayImage(cameraData, width, height));
+      GrayImage& image(*imagePtr);
 
       image.setFilters(filters);
       image.setBytesPerPixel(6);
@@ -311,11 +321,7 @@ namespace unpack {
       std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, exifData));
       int min = 0;
       for (int row = 0; row < height; row++) {
-        Image::PixelType* rowPixels(image.pixelsAtRow(row));
-        Image::ColorType rowColors[2] = {
-          image.colorAtPoint(Point(row, 0)),
-          image.colorAtPoint(Point(row, 1))
-        };
+        GrayImage::PixelType* rowPixels(image.pixelsAtRow(row));
 
 #if 0
         /* FIXME why isn't this working? */
@@ -328,26 +334,32 @@ namespace unpack {
 
         int col;
         for (col = 0; col < 2; col++) {
-          int diff = this->decodeDiff(*decoder);
+          const int diff = this->decodeDiff(*decoder);
           hpred[col] = vpred[row & 1][col] += diff;
-          if (hpred[col] + min >= max) {
+          if (hpred[col] >= max - min) {
             throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
           }
-          rowPixels[col][rowColors[col]] = curveTable[hpred[col]];
+          rowPixels[col].value = curveTable[hpred[col]];
         }
 
         for (; col < width; col++) {
-          unsigned int colIsOdd = col & 1;
-          int diff = this->decodeDiff(*decoder);
+          const unsigned int colIsOdd = col & 1;
+          const int diff = this->decodeDiff(*decoder);
           hpred[colIsOdd] += diff;
-          if (hpred[colIsOdd] + min >= max) {
+          if (hpred[colIsOdd] >= max - min) {
             throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
           }
-          rowPixels[col][rowColors[colIsOdd]] = curveTable[hpred[colIsOdd]];
+          rowPixels[col].value = curveTable[hpred[colIsOdd]];
         }
       }
 
       return imagePtr.release();
+    }
+
+    virtual Image* unpackRgbImage(
+        std::streambuf& is, int width, int height, const ExifData& exifData)
+    {
+      return 0;
     }
   };
 
@@ -387,20 +399,31 @@ namespace unpack {
 
 }
 
-Image* ImageReader::readImage(
+GrayImage* ImageReader::readGrayImage(
     std::streambuf& istream, const char* mimeType,
     int width, int height, const ExifData& exifData)
 {
   std::auto_ptr<unpack::Unpacker> unpacker(
       unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
 
-  std::auto_ptr<Image> ret(
-      unpacker->unpackImage(istream, width, height, exifData));
+  std::auto_ptr<GrayImage> ret(
+      unpacker->unpackGrayImage(istream, width, height, exifData));
 
+  // Gotta admit, I don't know what this does :). dcraw has it.
   unsigned int filters(ret->filters());
   ret->setFilters(filters & (~((filters & 0x55555555) << 1)));
 
   return ret.release();
+}
+
+Image* ImageReader::readRgbImage(
+    std::streambuf& istream, const char* mimeType,
+    int width, int height, const ExifData& exifData)
+{
+  std::auto_ptr<unpack::Unpacker> unpacker(
+      unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
+
+  return unpacker->unpackRgbImage(istream, width, height, exifData);
 }
 
 } // namespace refinery

@@ -55,46 +55,33 @@ TEST(ImageReaderTest, NikonD5000) {
 
   refinery::ImageReader reader;
 
-  std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, mimeType, width, height, exifData));
-  refinery::Image& image(*imagePtr);
+  std::auto_ptr<refinery::GrayImage> grayImagePtr(
+      reader.readGrayImage(fb, mimeType, width, height, exifData));
+  const refinery::GrayImage& image(*grayImagePtr);
 
-  EXPECT_EQ(6, image.bytesPerPixel());
   EXPECT_EQ(height, image.height());
   EXPECT_EQ(width, image.width());
 
   // Spot-check: first pixel, last pixel, a quad in the middle
-  refinery::Image::PixelType pixel;
+  refinery::GrayImage::PixelType pixel;
 
-  pixel = image.pixelAtPoint(0, 0);
-  EXPECT_EQ(0, pixel.r) << "row 0";
-  EXPECT_EQ(1127, pixel.g) << "row 0";
-  EXPECT_EQ(0, pixel.b) << "row 0";
+  pixel = image.constPixelAtPoint(0, 0);
+  EXPECT_EQ(1127, pixel.value) << "pixel (0, 0)";
 
-  pixel = image.pixelAtPoint(312, 512);
-  EXPECT_EQ(0, pixel.r) << "row 312";
-  EXPECT_EQ(1522, pixel.g) << "row 312";
-  EXPECT_EQ(0, pixel.b) << "row 312";
+  pixel = image.constPixelAtPoint(312, 512);
+  EXPECT_EQ(1522, pixel.value) << "pixel (312, 512)";
 
-  pixel = image.pixelAtPoint(312, 513);
-  EXPECT_EQ(0, pixel.r) << "row 312";
-  EXPECT_EQ(0, pixel.g) << "row 312";
-  EXPECT_EQ(1704, pixel.b) << "row 312";
+  pixel = image.constPixelAtPoint(312, 513);
+  EXPECT_EQ(1704, pixel.value) << "pixel (312, 513)";
 
-  pixel = image.pixelAtPoint(313, 512);
-  EXPECT_EQ(604, pixel.r) << "row 313";
-  EXPECT_EQ(0, pixel.g) << "row 313";
-  EXPECT_EQ(0, pixel.b) << "row 313";
+  pixel = image.constPixelAtPoint(313, 512);
+  EXPECT_EQ(604, pixel.value) << "pixel (313, 512)";
 
-  pixel = image.pixelAtPoint(313, 513);
-  EXPECT_EQ(0, pixel.r) << "row 313";
-  EXPECT_EQ(1529, pixel.g) << "row 313";
-  EXPECT_EQ(0, pixel.b) << "row 313";
+  pixel = image.constPixelAtPoint(313, 513);
+  EXPECT_EQ(1529, pixel.value) << "pixel (313, 513)";
 
-  pixel = image.pixelAtPoint(2867, 4309);
-  EXPECT_EQ(0, pixel.r) << "row 2867";
-  EXPECT_EQ(851, pixel.g) << "row 2867";
-  EXPECT_EQ(0, pixel.b) << "row 2867";
+  pixel = image.constPixelAtPoint(2867, 4309);
+  EXPECT_EQ(851, pixel.value) << "pixel (2867, 4309)";
 };
 
 TEST(ImageReaderTest, Ppm16Bit) {
@@ -107,24 +94,23 @@ TEST(ImageReaderTest, Ppm16Bit) {
 
   refinery::InMemoryExifData exifData;
   std::auto_ptr<refinery::Image> imagePtr(
-      reader.readImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
-  refinery::Image& image(*imagePtr);
+      reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
+  const refinery::Image& image(*imagePtr);
 
   EXPECT_EQ(101266, fb.pubseekoff(0, std::ios::cur));
   EXPECT_EQ(225, image.width());
   EXPECT_EQ(75, image.height());
-  EXPECT_EQ(6, image.bytesPerPixel());
 
   // Spot-check
-  refinery::Image::PixelType pixel0_0(image.pixelAtPoint(0, 0));
-  EXPECT_EQ(209, pixel0_0[0]);
-  EXPECT_EQ(357, pixel0_0[1]);
-  EXPECT_EQ(237, pixel0_0[2]);
+  const refinery::Image::PixelType pixel0_0(image.constPixelAtPoint(0, 0));
+  EXPECT_EQ(209, pixel0_0.r);
+  EXPECT_EQ(357, pixel0_0.g);
+  EXPECT_EQ(237, pixel0_0.b);
 
-  refinery::Image::PixelType pixel74_224(image.pixelAtPoint(74, 224));
-  EXPECT_EQ(360, pixel74_224[0]);
-  EXPECT_EQ(664, pixel74_224[1]);
-  EXPECT_EQ(588, pixel74_224[2]);
+  const refinery::Image::PixelType pixel74_224(image.constPixelAtPoint(74, 224));
+  EXPECT_EQ(360, pixel74_224.r);
+  EXPECT_EQ(664, pixel74_224.g);
+  EXPECT_EQ(588, pixel74_224.b);
 }
 
 } // namespace
