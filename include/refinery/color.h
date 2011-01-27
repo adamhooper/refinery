@@ -60,17 +60,6 @@ public:
       }
     }
   }
-
-  template<typename U, typename V> void convert(const U& in, V& out)
-  {
-    out = V();
-
-    for (unsigned int i = 0; i < 4; i++) {
-      for (unsigned int j = 0; j < 3; j++) {
-        out[j] += mMatrix[j][i] * in.at(i);
-      }
-    }
-  }
 };
 
 } // namespace refinery

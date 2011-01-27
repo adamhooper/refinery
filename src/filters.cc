@@ -97,7 +97,7 @@ namespace {
         PixelType* pixels(mImage.pixelsAtRow(row));
         for (unsigned int col = 0; col < width; col++, pixels++) {
           RGBPixel<float> rgb;
-          converter.convert(pixels[0], rgb);
+          converter.convert(pixels[0].constArray(), rgb.array());
 
           pixels[0][0] = clamp16(rgb.r());
           pixels[0][1] = clamp16(rgb.g());

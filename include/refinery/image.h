@@ -39,25 +39,29 @@ struct Point {
 template<typename T> struct RGBPixel {
   typedef unsigned int ColorType;
   typedef T ValueType;
-  T rgb[4];
+  typedef T ArrayType[3];
+  ArrayType rgb;
 
   RGBPixel() {
     rgb[0] = 0;
     rgb[1] = 0;
     rgb[2] = 0;
-    rgb[3] = 0;
   }
   template<typename U> RGBPixel(const U (&rhs)[3]) {
     rgb[0] = rhs[0];
     rgb[1] = rhs[1];
     rgb[2] = rhs[2];
-    rgb[3] = 0;
   }
   template<typename U> RGBPixel(const RGBPixel<U>& rhs) {
     rgb[0] = rhs[0];
     rgb[1] = rhs[1];
     rgb[2] = rhs[2];
-    rgb[3] = 0;
+  }
+  inline ArrayType& array() {
+    return rgb;
+  }
+  inline const ArrayType& constArray() const {
+    return rgb;
   }
   inline const T& r() const {
     return rgb[0];
@@ -158,9 +162,11 @@ public:
     return colorAtPoint(Point(row, col));
   }
 
-  const PixelType* constPixels() const { return &mPixels[0]; }
   PixelType* pixels() { return &mPixels[0]; }
   PixelType* pixelsEnd() { return &mPixels[mWidth * mHeight]; }
+
+  const PixelType* constPixels() const { return &mPixels[0]; }
+  const PixelType* constPixelsEnd() const { return &mPixels[mWidth * mHeight]; }
 
   const PixelType* constPixelsAtRow(int row) const {
     return &mPixels[row * mWidth];
