@@ -284,30 +284,6 @@ src/image.cc.s:
 	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/image.cc.s
 .PHONY : src/image.cc.s
 
-src/input.o: src/input.cc.o
-.PHONY : src/input.o
-
-# target to build an object file
-src/input.cc.o:
-	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/input.cc.o
-.PHONY : src/input.cc.o
-
-src/input.i: src/input.cc.i
-.PHONY : src/input.i
-
-# target to preprocess a source file
-src/input.cc.i:
-	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/input.cc.i
-.PHONY : src/input.cc.i
-
-src/input.s: src/input.cc.s
-.PHONY : src/input.s
-
-# target to generate assembly for a file
-src/input.cc.s:
-	$(MAKE) -f CMakeFiles/refinery-0.1.dir/build.make CMakeFiles/refinery-0.1.dir/src/input.cc.s
-.PHONY : src/input.cc.s
-
 src/interpolate.o: src/interpolate.cc.o
 .PHONY : src/interpolate.o
 
@@ -452,29 +428,29 @@ test/gtest_main.cc.s:
 	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/gtest_main.cc.s
 .PHONY : test/gtest_main.cc.s
 
-test/input_test.o: test/input_test.cc.o
-.PHONY : test/input_test.o
+test/huffman_decoder.o: test/huffman_decoder.cc.o
+.PHONY : test/huffman_decoder.o
 
 # target to build an object file
-test/input_test.cc.o:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/input_test.cc.o
-.PHONY : test/input_test.cc.o
+test/huffman_decoder.cc.o:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/huffman_decoder.cc.o
+.PHONY : test/huffman_decoder.cc.o
 
-test/input_test.i: test/input_test.cc.i
-.PHONY : test/input_test.i
+test/huffman_decoder.i: test/huffman_decoder.cc.i
+.PHONY : test/huffman_decoder.i
 
 # target to preprocess a source file
-test/input_test.cc.i:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/input_test.cc.i
-.PHONY : test/input_test.cc.i
+test/huffman_decoder.cc.i:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/huffman_decoder.cc.i
+.PHONY : test/huffman_decoder.cc.i
 
-test/input_test.s: test/input_test.cc.s
-.PHONY : test/input_test.s
+test/huffman_decoder.s: test/huffman_decoder.cc.s
+.PHONY : test/huffman_decoder.s
 
 # target to generate assembly for a file
-test/input_test.cc.s:
-	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/input_test.cc.s
-.PHONY : test/input_test.cc.s
+test/huffman_decoder.cc.s:
+	$(MAKE) -f CMakeFiles/test/gtest_main.dir/build.make CMakeFiles/test/gtest_main.dir/test/huffman_decoder.cc.s
+.PHONY : test/huffman_decoder.cc.s
 
 test/interpolate_test.o: test/interpolate_test.cc.o
 .PHONY : test/interpolate_test.o
@@ -600,9 +576,6 @@ help:
 	@echo "... src/image.o"
 	@echo "... src/image.i"
 	@echo "... src/image.s"
-	@echo "... src/input.o"
-	@echo "... src/input.i"
-	@echo "... src/input.s"
 	@echo "... src/interpolate.o"
 	@echo "... src/interpolate.i"
 	@echo "... src/interpolate.s"
@@ -621,9 +594,9 @@ help:
 	@echo "... test/gtest_main.o"
 	@echo "... test/gtest_main.i"
 	@echo "... test/gtest_main.s"
-	@echo "... test/input_test.o"
-	@echo "... test/input_test.i"
-	@echo "... test/input_test.s"
+	@echo "... test/huffman_decoder.o"
+	@echo "... test/huffman_decoder.i"
+	@echo "... test/huffman_decoder.s"
 	@echo "... test/interpolate_test.o"
 	@echo "... test/interpolate_test.i"
 	@echo "... test/interpolate_test.s"
