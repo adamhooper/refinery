@@ -68,7 +68,7 @@ public:
 
   GammaCurve(const GammaCurve& rhs) : mCurve(rhs.mCurve) {}
 
-  inline const uint16_t operator[](int index) const { return (*mCurve)[index]; }
+  inline const uint16_t at(int index) const { return (*mCurve)[index]; }
 };
 
 class Histogram {
@@ -87,14 +87,14 @@ class Histogram {
     CurveType& gCurve(*mGCurve);
     CurveType& bCurve(*mBCurve);
 
-    for (int row = 0; row < image.height(); row++) {
-      const Image::PixelType* pixels(image.constPixelsAtRow(row));
+    const Image::PixelType* pixel(image.constPixels());
+    const Image::PixelType* endPixel(image.constPixelsEnd());
 
-      for (int col = 0; col < image.width(); col++, pixels++) {
-        rCurve[pixels[0].r() >> 3]++;
-        gCurve[pixels[0].g() >> 3]++;
-        bCurve[pixels[0].b() >> 3]++;
-      }
+    while (pixel < endPixel) {
+      rCurve[pixel->r() >> 3]++;
+      gCurve[pixel->g() >> 3]++;
+      bCurve[pixel->b() >> 3]++;
+      pixel++;
     }
   }
 
@@ -149,9 +149,9 @@ class PpmImageWriter {
       const Image::PixelType& inRgb, Image::PixelType& outRgb,
       const GammaCurve& gammaCurve)
   {
-    outRgb.r() = gammaCurve[inRgb.r()];
-    outRgb.g() = gammaCurve[inRgb.g()];
-    outRgb.b() = gammaCurve[inRgb.b()];
+    outRgb.r() = gammaCurve.at(inRgb.r());
+    outRgb.g() = gammaCurve.at(inRgb.g());
+    outRgb.b() = gammaCurve.at(inRgb.b());
   }
 
   void writePixel8Bit(const Image::PixelType& rgb)
@@ -173,29 +173,29 @@ class PpmImageWriter {
 
   void writeImageBytes8Bit(const Image& image, const GammaCurve& gammaCurve)
   {
+    const Image::PixelType* pixel(image.constPixels());
+    const Image::PixelType* endPixel(image.constPixelsEnd());
+
     Image::PixelType rgb;
 
-    for (int row = 0; row < image.height(); row++) {
-      const Image::PixelType* pixels(image.constPixelsAtRow(row));
-
-      for (int col = 0; col < image.width(); col++, pixels++) {
-        gammaCorrectPixel(pixels[0], rgb, gammaCurve);
-        writePixel8Bit(rgb);
-      }
+    while (pixel < endPixel) {
+      gammaCorrectPixel(*pixel, rgb, gammaCurve);
+      writePixel8Bit(rgb);
+      pixel++;
     }
   }
 
   void writeImageBytes16Bit(const Image& image, const GammaCurve& gammaCurve)
   {
+    const Image::PixelType* pixel(image.constPixels());
+    const Image::PixelType* endPixel(image.constPixelsEnd());
+
     Image::PixelType rgb;
 
-    for (int row = 0; row < image.height(); row++) {
-      const Image::PixelType* pixels(image.constPixelsAtRow(row));
-
-      for (int col = 0; col < image.width(); col++, pixels++) {
-        gammaCorrectPixel(pixels[0], rgb, gammaCurve);
-        writePixel16Bit(rgb);
-      }
+    while (pixel < endPixel) {
+      gammaCorrectPixel(*pixel, rgb, gammaCurve);
+      writePixel16Bit(rgb);
+      pixel++;
     }
   }
 
