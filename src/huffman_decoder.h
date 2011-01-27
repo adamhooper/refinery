@@ -1,6 +1,3 @@
-#ifndef _REFINERY_INPUT_H
-#define _REFINERY_INPUT_H
-
 #include <streambuf>
 #include <vector>
 
@@ -166,5 +163,3 @@ public:
 };
 
 } // namespace refinery
-
-#endif /* REFINERY_INPUT_H */

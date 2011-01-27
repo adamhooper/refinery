@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "refinery/input.h"
+#include "../src/huffman_decoder.h"
 
 namespace {
 

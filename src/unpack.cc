@@ -6,7 +6,8 @@
 
 #include "refinery/exif.h"
 #include "refinery/image.h"
-#include "refinery/input.h"
+
+#include "huffman_decoder.h"
 
 namespace refinery {
 
