@@ -10,6 +10,8 @@ class ExifData {
 public:
   typedef unsigned char byte;
 
+  virtual ~ExifData() {}
+
   virtual bool hasKey(const char* key) const = 0;
   virtual std::string getString(const char* key) const = 0;
   virtual void getBytes(const char* key, std::vector<byte>& outBytes) const = 0;
