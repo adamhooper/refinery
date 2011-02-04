@@ -1,8 +1,8 @@
 #ifndef _REFINERY_UNPACK_H
 #define _REFINERY_UNPACK_H
 
-#include <cstddef>
 #include <iosfwd>
+#include <cstdio>
 
 namespace refinery {
 
@@ -33,9 +33,15 @@ public:
   GrayImage* readGrayImage(
       std::streambuf& istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
+  GrayImage* readGrayImage(
+      FILE* istream, const char* mimeType,
+      int width, int height, const ExifData& exifData);
 
   Image* readRgbImage(
       std::streambuf& istream, const char* mimeType,
+      int width, int height, const ExifData& exifData);
+  Image* readRgbImage(
+      FILE* istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
 };
 

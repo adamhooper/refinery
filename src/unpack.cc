@@ -8,6 +8,7 @@
 #include "refinery/image.h"
 
 #include "huffman_decoder.h"
+#include "c_file_istreambuf.h"
 
 namespace refinery {
 
@@ -417,6 +418,14 @@ GrayImage* ImageReader::readGrayImage(
   return ret.release();
 }
 
+GrayImage* ImageReader::readGrayImage(
+    FILE* istream, const char* mimeType,
+    int width, int height, const ExifData& exifData)
+{
+  c_file_istreambuf istreambuf(istream);
+  return readGrayImage(istreambuf, mimeType, width, height, exifData);
+}
+
 Image* ImageReader::readRgbImage(
     std::streambuf& istream, const char* mimeType,
     int width, int height, const ExifData& exifData)
@@ -425,6 +434,14 @@ Image* ImageReader::readRgbImage(
       unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
 
   return unpacker->unpackRgbImage(istream, width, height, exifData);
+}
+
+Image* ImageReader::readRgbImage(
+    FILE* istream, const char* mimeType,
+    int width, int height, const ExifData& exifData)
+{
+  c_file_istreambuf istreambuf(istream);
+  return readRgbImage(istreambuf, mimeType, width, height, exifData);
 }
 
 } // namespace refinery

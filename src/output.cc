@@ -241,8 +241,10 @@ void ImageWriter::writeImage(
     const Image& image, const char* filename, const char* type,
     unsigned int colorDepth)
 {
-  std::ofstream out(filename);
-  writeImage(image, out, type);
+  std::ofstream out(
+      filename,
+      std::ios::out | std::ios::binary | std::ios::trunc);
+  writeImage(image, out, type, colorDepth);
 }
 
 } // namespace refinery
