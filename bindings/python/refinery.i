@@ -22,8 +22,13 @@
 %exception {
   try {
     $action
-  } catch (const std::exception& e) {
-    SWIG_exception(SWIG_RuntimeError, e.what());
+  }
+  SWIG_CATCH_STDEXCEPT
+  catch (Swig::DirectorException &e) {
+    SWIG_fail; /* for Python exceptions coming back to Python */
+  }
+  catch (...) {
+    SWIG_exception_fail(SWIG_UnknownError, "Unknown exception");
   }
 }
 
