@@ -705,7 +705,9 @@ CameraFactory::~CameraFactory() {
 CameraFactory& CameraFactory::instance()
 {
   if (!CameraFactoryData::cameraFactoryInstance) {
+#if _OPENMP
 #pragma omp critical(CameraFactory_instance)
+#endif /* _OPENMP */
     {
       if (!CameraFactoryData::cameraFactoryInstance) {
         CameraFactoryData::cameraFactoryInstance = new CameraFactory();
@@ -732,7 +734,9 @@ const Camera& CameraFactory::detectCamera(const ExifData& exifData) const
 CameraDataFactory& CameraDataFactory::instance()
 {
   if (!CameraFactoryData::cameraDataFactoryInstance) {
+#if _OPENMP
 #pragma omp critical(CameraDataFactory_instance)
+#endif /* _OPENMP */
     {
       if (!CameraFactoryData::cameraDataFactoryInstance) {
         CameraFactoryData::cameraDataFactoryInstance = new CameraDataFactory();
