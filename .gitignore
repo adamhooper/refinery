@@ -8,3 +8,9 @@ bin/*
 lib/*
 test/gtest_main
 *.swp
+Makefile
+
+bindings/python/_refinery.so
+bindings/python/refinery.py
+bindings/python/refineryPYTHON_wrap.cxx
+bindings/python/refineryPYTHON_wrap.h

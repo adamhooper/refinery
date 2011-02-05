@@ -64,15 +64,7 @@ if (LICENSE_GPL)
 endif()
 add_test(AllTestsInGtestMain test/gtest_main)
 
-### Python Bindings
-##set(SWIG_EXECUTABLE swig2.0)
-##find_package(SWIG REQUIRED)
-##include(${SWIG_USE_FILE})
-##find_package(PythonLibs)
-##include_directories(${PYTHON_INCLUDE_PATH})
-##set_source_files_properties(bindings/refinery.i PROPERTIES CPLUSPLUS ON)
-##swig_add_module(refinery python bindings/refinery.i)
-##swig_link_libraries(refinery refinery-0.1 ${PYTHON_LIBRARIES})
+add_subdirectory(bindings)
 
 # Installation
 install(TARGETS refinery-0.1

@@ -1,0 +1,10 @@
+find_package(PythonLibs)
+
+if (PYTHON_INCLUDE_DIR)
+  include_directories(${PYTHON_INCLUDE_PATH})
+  set_source_files_properties(refinery.i PROPERTIES CPLUSPLUS ON)
+  swig_add_module(refinery python refinery.i)
+  swig_link_libraries(refinery refinery-0.1 ${PYTHON_LIBRARIES})
+else()
+  message(STATUS "Python 2.7 headers not found. Install python-dev package to compile Python bindings.")
+endif()
