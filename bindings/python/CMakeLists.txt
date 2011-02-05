@@ -6,7 +6,9 @@ if (PYTHON_INCLUDE_DIR)
       OUTPUT_STRIP_TRAILING_WHITESPACE)
 
   include_directories(${PYTHON_INCLUDE_PATH})
-  set_source_files_properties(refinery.i PROPERTIES CPLUSPLUS ON)
+  set_source_files_properties(refinery.i
+      PROPERTIES CPLUSPLUS ON
+      SWIG_FLAGS "-Wextra")
 
   swig_add_module(refinery python refinery.i)
   swig_link_libraries(refinery refinery-0.1 ${PYTHON_LIBRARIES})
