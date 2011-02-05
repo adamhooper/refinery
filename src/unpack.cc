@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include "refinery/exif.h"
@@ -339,7 +340,8 @@ namespace unpack {
           const int diff = this->decodeDiff(*decoder);
           hpred[col] = vpred[row & 1][col] += diff;
           if (hpred[col] >= max - min) {
-            throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
+            throw std::invalid_argument(
+                "unpackImage: hpred[colIsOdd] + min >= max");
           }
           rowPixels[col].value = curveTable[hpred[col]];
         }
@@ -349,7 +351,8 @@ namespace unpack {
           const int diff = this->decodeDiff(*decoder);
           hpred[colIsOdd] += diff;
           if (hpred[colIsOdd] >= max - min) {
-            throw std::string("unpackImage: hpred[colIsOdd] + min >= max");
+            throw std::invalid_argument(
+                "unpackImage: hpred[colIsOdd] + min >= max");
           }
           rowPixels[col].value = curveTable[hpred[colIsOdd]];
         }
