@@ -22,8 +22,8 @@ namespace {
           col = right - border;
         }
 
-        unsigned int sum[4] = { 0, 0, 0, 0 };
-        unsigned int count[4] = { 0, 0, 0, 0 };
+        unsigned int sum[3] = { 0, 0, 0 };
+        unsigned int count[3] = { 0, 0, 0 };
 
         for (int y = row - 1; y <= row + 1; y++) {
           if (y < top || y >= bottom) continue;
@@ -40,7 +40,7 @@ namespace {
 
         Point curP(row, col);
         Image::ColorType curC = image.colorAtPoint(curP);
-        for (Image::ColorType c = 0; c < 4; c++) {
+        for (Image::ColorType c = 0; c < 3; c++) {
           if (c == curC) {
             rgbImage.pixelAtPoint(curP)[c] =
                 image.constPixelAtPoint(curP).value;
