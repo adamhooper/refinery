@@ -211,10 +211,6 @@ typedef RGBPixel<unsigned short> u16RGBPixel;
 typedef LABPixel<short> s16LABPixel;
 typedef GrayPixel<unsigned short> u16GrayPixel;
 
-template class TypedImage<u16RGBPixel>;
-template class TypedImage<s16LABPixel>;
-template class TypedImage<u16GrayPixel>;
-
 typedef TypedImage<u16RGBPixel> RGBImage;
 typedef TypedImage<s16LABPixel> LABImage;
 typedef TypedImage<u16GrayPixel> GrayImage;
