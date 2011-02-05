@@ -12,6 +12,8 @@ EXAMPLE
 
 Read util/licensed/gpl/raw2ppm.cc: it reads a raw file and outputs a PPM image.
 
+util/licensed/gpl/raw2ppm.py does the same thing in Python
+
 
 COMPILING
 =========
