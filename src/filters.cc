@@ -23,11 +23,6 @@ namespace {
       if (val < 0) return 0;
       if (val > 0xffff) return 0xffff;
       return val;
-      /*
-      // Assume right-shift of signed values leaves 1s, not 0s
-      const unsigned int trashBits = val >> 16;
-      return trashBits ? (~trashBits >> 16) : val;
-      */
     }
 
   public:
