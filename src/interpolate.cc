@@ -200,7 +200,7 @@ private:
 public:
   AHDInterpolator()
   {
-    if (xyzCbrtLookup.size() == 0) {
+    if (xyzCbrtLookup.size() != 0x20000) {
       // This is thread-safe: worst-case we just set the same value multiple
       // times.
       xyzCbrtLookup.reserve(0x20000);
