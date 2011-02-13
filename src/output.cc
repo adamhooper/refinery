@@ -15,144 +15,9 @@ namespace refinery {
 
 using boost::shared_ptr;
 
-class GammaCurve {
-  typedef std::vector<uint16_t> CurveType;
-  shared_ptr<CurveType> mCurve;
-
-  void init(double pwr, double ts, int max) {
-    double g[6] = { 0, 0, 0, 0, 0, 0 };
-    g[0] = pwr;
-    g[1] = ts;
-
-    double bnd[2] = { 0, 1 };
-
-    for (int i = 0; i < 48; i++) {
-      g[2] = (bnd[0] + bnd[1]) / 2;
-
-      double t = std::pow(g[2]/g[1],-g[0]) - 1;
-      bnd[t/g[0] - 1/g[2] > -1] = g[2];
-    }
-
-    g[3] = g[2] / g[1];
-    g[4] = g[2] * (1/g[0] - 1);
-    g[5] = 1 / (
-        g[1] * g[3] * g[3] / 2
-        + 1 - g[2] - g[3]
-        - g[2] * g[3] * (std::log(g[3]) - 1)
-        ) - 1;
-
-    mCurve.reset(new CurveType(0x10000, 0));
-    CurveType& curve(*mCurve);
-
-    for (unsigned int i = 0; i < 0x10000; i++) {
-      double r = static_cast<double>(i) / max;
-      uint16_t val;
-      if (r < 1.0) {
-        val = 0x10000 * (
-            r < g[3]
-              ? r * g[1]
-              : (std::pow(r, g[0]) * (1 + g[4]) - g[4])
-            );
-      } else {
-        val = 0xffff;
-      }
-      curve[i] = val;
-    }
-  }
-
-public:
-  GammaCurve(double pwr, double ts, int max)
-  {
-    init(pwr, ts, max);
-  }
-
-  GammaCurve(const GammaCurve& rhs) : mCurve(rhs.mCurve) {}
-
-  inline const uint16_t at(int index) const { return (*mCurve)[index]; }
-};
-
-class Histogram {
-  typedef std::vector<unsigned short> CurveType;
-  shared_ptr<CurveType> mRCurve;
-  shared_ptr<CurveType> mGCurve;
-  shared_ptr<CurveType> mBCurve;
-
-  void init(const Image& image)
-  {
-    mRCurve.reset(new CurveType(0x2000, 0));
-    mGCurve.reset(new CurveType(0x2000, 0));
-    mBCurve.reset(new CurveType(0x2000, 0));
-
-    CurveType& rCurve(*mRCurve);
-    CurveType& gCurve(*mGCurve);
-    CurveType& bCurve(*mBCurve);
-
-    const Image::PixelType* pixel(image.constPixels());
-    const Image::PixelType* endPixel(image.constPixelsEnd());
-
-    while (pixel < endPixel) {
-      rCurve[pixel->r() >> 3]++;
-      gCurve[pixel->g() >> 3]++;
-      bCurve[pixel->b() >> 3]++;
-      pixel++;
-    }
-  }
-
-public:
-  Histogram(const Image& image)
-  {
-    init(image);
-  }
-
-  Histogram(const Histogram& rhs)
-    : mRCurve(rhs.mRCurve) , mGCurve(rhs.mGCurve), mBCurve(rhs.mBCurve) {}
-
-  inline unsigned short count(const Image::ColorType& color, unsigned int val) const
-  {
-    switch (color) {
-      case 0: return (*mRCurve)[val];
-      case 1: return (*mGCurve)[val];
-      case 2: return (*mBCurve)[val];
-    }
-
-    return 0;
-  }
-};
-
 class PpmImageWriter {
   std::ostream& mOutput;
   std::streambuf& mOutputStream;
-
-  GammaCurve buildGammaCurve(const Image& image)
-  {
-    // Output image will be 1% white
-    unsigned int perc = image.width() * image.height() * 0.01;
-    unsigned int white = 0;
-
-    Histogram histogram(image);
-
-    for (Image::ColorType c = 0; c <= 2; c++) {
-      unsigned int total = 0;
-      unsigned int val = 0x1fff;
-      while (val > 32) {
-        total += histogram.count(c, val);
-        if (total > perc) break;
-        val--;
-      }
-      if (white < val) white = val;
-    }
-
-    return GammaCurve(0.45, 4.5, white << 3);
-  }
-
-  void gammaCorrectPixel(
-      const Image::PixelType& inRgb, Image::PixelType& outRgb,
-      const GammaCurve& gammaCurve)
-  {
-    outRgb.r() = gammaCurve.at(inRgb.r());
-    outRgb.g() = gammaCurve.at(inRgb.g());
-    outRgb.b() = gammaCurve.at(inRgb.b());
-  }
 
   void writePixel8Bit(const Image::PixelType& rgb)
   {
@@ -171,30 +36,24 @@ class PpmImageWriter {
     mOutputStream.sputc(rgb.b() & 0xff);
   }
 
-  void writeImageBytes8Bit(const Image& image, const GammaCurve& gammaCurve)
+  void writeImageBytes8Bit(const Image& image)
   {
     const Image::PixelType* pixel(image.constPixels());
     const Image::PixelType* endPixel(image.constPixelsEnd());
 
-    Image::PixelType rgb;
-
     while (pixel < endPixel) {
-      gammaCorrectPixel(*pixel, rgb, gammaCurve);
-      writePixel8Bit(rgb);
+      writePixel8Bit(*pixel);
       pixel++;
     }
   }
 
-  void writeImageBytes16Bit(const Image& image, const GammaCurve& gammaCurve)
+  void writeImageBytes16Bit(const Image& image)
   {
     const Image::PixelType* pixel(image.constPixels());
     const Image::PixelType* endPixel(image.constPixelsEnd());
 
-    Image::PixelType rgb;
-
     while (pixel < endPixel) {
-      gammaCorrectPixel(*pixel, rgb, gammaCurve);
-      writePixel16Bit(rgb);
+      writePixel16Bit(*pixel);
       pixel++;
     }
   }
@@ -209,12 +68,10 @@ public:
     mOutput << image.width() << " " << image.height() << "\n";
     mOutput << ((1 << colorDepth) - 1) << "\n";
 
-    GammaCurve gammaCurve(buildGammaCurve(image));
-
     if (colorDepth == 8) {
-      writeImageBytes8Bit(image, gammaCurve);
+      writeImageBytes8Bit(image);
     } else {
-      writeImageBytes16Bit(image, gammaCurve);
+      writeImageBytes16Bit(image);
     }
   }
 };

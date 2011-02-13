@@ -36,10 +36,12 @@ struct Point {
   }
 };
 
-template<typename T> struct RGBPixel {
+template<typename T>
+struct RGBPixel {
   typedef unsigned int ColorType;
+  static const ColorType NColors = 3;
   typedef T ValueType;
-  typedef T ArrayType[3];
+  typedef T ArrayType[NColors];
   ArrayType rgb;
 
   RGBPixel() {
@@ -60,33 +62,15 @@ template<typename T> struct RGBPixel {
   inline ArrayType& array() {
     return rgb;
   }
-  inline const ArrayType& constArray() const {
-    return rgb;
-  }
-  inline const T& r() const {
-    return rgb[0];
-  }
-  inline const T& g() const {
-    return rgb[1];
-  }
-  inline const T& b() const {
-    return rgb[2];
-  }
-  inline T& r() {
-    return rgb[0];
-  }
-  inline T& g() {
-    return rgb[1];
-  }
-  inline T& b() {
-    return rgb[2];
-  }
-  inline T& operator[](const ColorType& index) {
-    return rgb[index];
-  }
-  inline const T& at(const ColorType& index) const {
-    return rgb[index];
-  }
+  inline const ArrayType& constArray() const { return rgb; }
+  inline const T& r() const { return rgb[0]; }
+  inline const T& g() const { return rgb[1]; }
+  inline const T& b() const { return rgb[2]; }
+  inline T& r() { return rgb[0]; }
+  inline T& g() { return rgb[1]; }
+  inline T& b() { return rgb[2]; }
+  inline T& operator[](const ColorType& index) { return rgb[index]; }
+  inline const T& at(const ColorType& index) const { return rgb[index]; }
 };
 
 template<typename T> struct LABPixel {
@@ -146,12 +130,13 @@ public:
   }
 
   const CameraData& cameraData() const { return mCameraData; }
-  int width() const { return mWidth; }
-  int height() const { return mHeight; }
+  unsigned int width() const { return mWidth; }
+  unsigned int height() const { return mHeight; }
+  unsigned int nPixels() const { return mWidth * mHeight; }
   int bytesPerPixel() const { return mBpp; }
-  int filters() const { return mFilters; }
+  unsigned int filters() const { return mFilters; }
   void setBytesPerPixel(int bpp) { mBpp = bpp; }
-  void setFilters(int filters) { mFilters = filters; }
+  void setFilters(unsigned int filters) { mFilters = filters; }
 
   ColorType colorAtPoint(const Point& point) const {
     int row = point.row;
