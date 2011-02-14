@@ -21,8 +21,10 @@
 #include "refinery/exif.h"
 #include "refinery/exif_exiv2.h"
 #include "refinery/filters.h"
+#include "refinery/gamma.h"
 #include "refinery/image.h"
 #include "refinery/interpolate.h"
+#include "refinery/histogram.h"
 #include "refinery/output.h"
 #include "refinery/unpack.h"
 
@@ -78,10 +80,13 @@ int main(int argc, char **argv)
   ConvertToRgbFilter rgbFilter;
   rgbFilter.filter(image);
 
-  std::ofstream out(argv[2], std::ios::binary | std::ios::out);
+  Histogram<Image, 3> histogram(image);
+  GammaCurve<Image::ValueType> gammaCurve(histogram);
+  GammaFilter gammaFilter;
+  gammaFilter.filter(image, gammaCurve);
 
   ImageWriter writer;
-  writer.writeImage(image, out, "PPM", 8);
+  writer.writeImage(image, argv[2], "PPM", 8);
 
   return 0;
 }

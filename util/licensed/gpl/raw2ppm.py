@@ -86,14 +86,19 @@ def convert(infile, outfile):
 
   print('Interpolating RGB values...')
   interpolator = refinery.Interpolator(refinery.Interpolator.INTERPOLATE_AHD)
-  image = interpolator.interpolate(grayImage)
+  rgbImage = interpolator.interpolate(grayImage)
 
   print('Converting from camera RGB to sRGB...')
-  refinery.ConvertToRgbFilter().filter(image)
+  refinery.ConvertToRgbFilter().filter(rgbImage)
+
+  print('Gamma-correcting...')
+  histogram = refinery.RGBHistogram(rgbImage)
+  gammaCurve = refinery.GammaCurveU16(histogram)
+  refinery.GammaFilter().filter(rgbImage, gammaCurve)
 
   print('Writing image to %s... (8-bit PPM)' % outfile)
   writer = refinery.ImageWriter()
-  writer.writeImage(image, 'out3.ppm', 'PPM', 8)
+  writer.writeImage(rgbImage, outfile, 'PPM', 8)
 
   print('Done!')
 

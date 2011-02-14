@@ -2,6 +2,7 @@
 
 #include "refinery/camera.h"
 #include "refinery/color.h"
+#include "refinery/gamma.h"
 #include "refinery/image.h"
 
 namespace refinery {
@@ -101,6 +102,36 @@ namespace {
       }
     }
   };
+
+  template<typename T>
+  class GammaFilterImpl {
+  public:
+    typedef T ImageType;
+    typedef typename ImageType::ColorType ColorType;
+    typedef typename ImageType::PixelType PixelType;
+    typedef typename ImageType::ValueType ValueType;
+    typedef GammaCurve<ValueType> CurveType;
+
+  private:
+    ImageType& mImage;
+    const CurveType& mGammaCurve;
+
+  public:
+    GammaFilterImpl(ImageType& image, const CurveType& gammaCurve)
+      : mImage(image), mGammaCurve(gammaCurve) {}
+
+    void filter() {
+      PixelType* pixel = mImage.pixels();
+      const PixelType* endPixel = mImage.constPixelsEnd();
+
+      for (; pixel < endPixel; pixel++) {
+        for (ColorType c = 0; c < PixelType::NColors; c++) {
+          ValueType& v((*pixel)[c]);
+          v = mGammaCurve.at(v);
+        }
+      }
+    }
+  };
 } // namespace {}
 
 template<typename T>
@@ -117,10 +148,20 @@ void ConvertToRgbFilter::filter(T& image)
   impl.filter();
 }
 
+template<typename ImageType, typename GammaCurveType>
+void GammaFilter::filter( ImageType& image, const GammaCurveType& gammaCurve)
+{
+  GammaFilterImpl<ImageType> impl(image, gammaCurve);
+  impl.filter();
+}
+
 // Instantiate the ones we need... (hack-ish)
 template void ScaleColorsFilter::filter<GrayImage>(GrayImage&);
 template class ScaleColorsFilterImpl<GrayImage>;
 template void ConvertToRgbFilter::filter<RGBImage>(RGBImage&);
 template class ConvertToRgbFilterImpl<RGBImage>;
+template void GammaFilter::filter<RGBImage, GammaCurve<typename RGBImage::ValueType> >(
+    RGBImage&, const GammaCurve<typename RGBImage::ValueType>&);
+template class GammaFilterImpl<RGBImage>;
 
 };

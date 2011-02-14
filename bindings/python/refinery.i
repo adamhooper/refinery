@@ -6,6 +6,8 @@
 #include "refinery/exif.h"
 #include "refinery/camera.h"
 #include "refinery/filters.h"
+#include "refinery/gamma.h"
+#include "refinery/histogram.h"
 #include "refinery/image.h"
 #include "refinery/image_tile.h"
 #include "refinery/interpolate.h"
@@ -57,11 +59,27 @@ namespace std {
 
 %include "refinery/filters.h"
 %extend refinery::ScaleColorsFilter {
-  %template(filter) filter<GrayImage>;
+  %template(filter) filter<refinery::GrayImage>;
 };
 %extend refinery::ConvertToRgbFilter {
-  %template(filter) filter<Image>;
+  %template(filter) filter<refinery::RGBImage>;
 };
+%extend refinery::GammaFilter {
+  %template(filter) filter<refinery::RGBImage, refinery::GammaCurve<unsigned short> >;
+};
+
+%warnfilter(314) refinery::GammaCurve::at;
+%include "refinery/gamma.h"
+namespace refinery {
+  %extend GammaCurve {
+    %template(GammaCurve) GammaCurve<refinery::Histogram<refinery::RGBImage, 3> >;
+  };
+}
+%template(GammaCurveU16) refinery::GammaCurve<unsigned short>;
+
+%include "refinery/histogram.h"
+%ignore refinery::Histogram<refinery::RGBImage, 3>::NColors;
+%template(RGBHistogram) refinery::Histogram<refinery::RGBImage, 3>;
 
 %include "refinery/image_tile.h"
 

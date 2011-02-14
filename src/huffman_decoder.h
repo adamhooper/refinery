@@ -55,7 +55,7 @@ class HuffmanDecoder {
 
     for (mMaxBits = 16; !counts[mMaxBits-1]; mMaxBits--) {}
 
-    mTable.reserve((1 << mMaxBits) - 1);
+    mTable.reserve(1 << mMaxBits);
 
     for (int h = 0, len = 0; len < mMaxBits; len++) {
       for (int i = 0; i < counts[len]; i++, leaf++) {
