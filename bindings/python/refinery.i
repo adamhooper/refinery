@@ -2,6 +2,8 @@
 
 %{
 
+#include <limits>
+
 #include "refinery/color.h"
 #include "refinery/exif.h"
 #include "refinery/camera.h"
@@ -54,6 +56,28 @@ namespace std {
 %include "refinery/image.h"
 %warnfilter(302) refinery::Image;
 %warnfilter(302) refinery::GrayImage;
+%extend refinery::TypedImage {
+  void fillRgb8(char* rgb8) const {
+    typedef T PixelType;
+    typedef typename PixelType::ValueType ValueType;
+    typedef typename PixelType::ColorType ColorType;
+
+    const unsigned int shift =
+      std::numeric_limits<ValueType>::digits
+      + std::numeric_limits<ValueType>::is_signed
+      - std::numeric_limits<unsigned char>::digits;
+
+    const PixelType* i = $self->constPixels();
+    const PixelType* lastPixel = $self->constPixelsEnd();
+
+    for (char* o = rgb8; i < lastPixel; i++, o += 3) {
+      for (ColorType c = 0; c < PixelType::NColors; c++) {
+        o[c] = static_cast<unsigned char>(i->at(c) >> shift);
+      }
+    }
+  }
+};
+%template(Image) refinery::TypedImage<refinery::u16RGBPixel>;
 
 %include "refinery/color.h"
 

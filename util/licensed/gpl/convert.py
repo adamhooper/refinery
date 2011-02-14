@@ -20,6 +20,13 @@
 
 import refinery
 import pyexiv2 # A GPLed dependency, hence we're GPL too
+using_pil = False
+try:
+  import PIL.Image
+  print('Will use Python Imaging Library (PIL) to save the image')
+  using_pil = True
+except ImportError:
+  print('Python Imaging Library (PIL) not found; will save as possibly-misoriented PPM')
 
 # refinery doesn't use Exiv2::ExifData pointers directly (because of
 # licensing), so we can't create a refinery::Exiv2ExifData pointer as we would
@@ -51,6 +58,9 @@ class PyExifData(refinery.ExifData):
 
   def getInt(self, key):
     value = self.exivImage[key].value
+    # Sometimes the value is erroneously a list and not an int
+    # example: Exif.Image.Orientation
+    if isinstance(value, list): value = value[0]
     return int(value)
 
   def getFloat(self, key):
@@ -72,13 +82,14 @@ def convert(infile, outfile):
   exivImage.read()
   exifData = PyExifData(exivImage)
 
-  reader = refinery.ImageReader()
   width = exivImage['Exif.SubImage2.ImageWidth'].value
   height = exivImage['Exif.SubImage2.ImageLength'].value
-  mimeType = 'image/x-nikon-nef'
+  mimeType = exivImage.mime_type
 
   print('Reading grayscale image (%s, %dx%d)' % (mimeType, width, height))
   f = open(infile)
+
+  reader = refinery.ImageReader()
   grayImage = reader.readGrayImage(f, mimeType, width, height, exifData)
 
   print('Scaling to full 16-bit color...')
@@ -96,9 +107,46 @@ def convert(infile, outfile):
   gammaCurve = refinery.GammaCurveU16(histogram)
   refinery.GammaFilter().filter(rgbImage, gammaCurve)
 
-  print('Writing image to %s... (8-bit PPM)' % outfile)
-  writer = refinery.ImageWriter()
-  writer.writeImage(rgbImage, outfile, 'PPM', 8)
+  if using_pil:
+    print('Transforming into Python Imaging Library (PIL) Image...')
+    ba = bytes('\0') * (width * height * 3)
+    rgbImage.fillRgb8(ba)
+    pilImage = PIL.Image.fromstring('RGB', (width, height), ba)
+
+    print('Finding image orientation...')
+    orientation = exifData.getInt('Exif.Image.Orientation')
+    if orientation == 1:
+      print('(original is fine, no reorientation needed)')
+    elif orientation == 2:
+      print('(original is flipped horizontally)')
+      pilImage = pilImage.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+    elif orientation == 3:
+      print('(original is rotated 180 degrees)')
+      pilImage = pilImage.transpose(PIL.Image.ROTATE_180)
+    elif orientation == 4:
+      print('(original is flipped vertically)')
+      pilImage = pilImage.transpose(PIL.Image.FLIP_TOP_BOTTOM)
+    elif orientation == 5:
+      print('(original is flipped by a top-left/bottom-right mirror')
+      pilImage = pilImage.transpose(PIL.Image.ROTATE_270).transpose(PIL.Image.FLIP_TOP_BOTTOM)
+    elif orientation == 6:
+      print('(original is rotated 90 degrees counter-clockwise)')
+      pilImage = pilImage.transpose(PIL.Image.ROTATE_90)
+    elif orientation == 7:
+      print('(original is flipped horizontally and rotated 90 degrees clockwise)')
+      pilImage = pilImage.transpose(PIL.Image.ROTATE_90).transpose(PIL.Image.FLIP_TOP_BOTTOM)
+    elif orientation == 8:
+      print('(original is rotated 90 degrees clockwise)')
+      pilImage = pilImage.transpose(PIL.Image.ROTATE_270)
+    else:
+      print('Error! Invalid orientation "%r", ignoring' % orientation)
+
+    print('Writing image to %s...' % outfile)
+    pilImage.save(outfile)
+  else:
+    print('Writing image to %s... (8-bit PPM)' % outfile)
+    writer = refinery.ImageWriter()
+    writer.writeImage(rgbImage, outfile, 'PPM', 8)
 
   print('Done!')
 
