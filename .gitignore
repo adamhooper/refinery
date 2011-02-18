@@ -8,6 +8,7 @@ bin/*
 lib/*
 test/gtest_main
 *.swp
+*.pyc
 Makefile
 
 bindings/python/_refinery.so
