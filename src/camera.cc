@@ -563,10 +563,12 @@ namespace CameraModels {
           fail = false;
           ret.black = table[i].black;
           ret.maximum = table[i].maximum;
-          double* xyz(reinterpret_cast<double*>(ret.xyzToCamera));
-          for (int j = 0; j < 12; j++) {
-            xyz[j] = table[i].trans[j] / 10000.0;
+          for (int j = 0; j < 4; j++) {
+            for (int k = 0; k < 3; k++) {
+              ret.xyzToCamera[j][k] = table[i].trans[j*3+k] / 10000.0;
+            }
           }
+          break;
         }
       }
       if (fail) throw std::logic_error(

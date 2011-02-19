@@ -1,6 +1,7 @@
 #ifndef _REFINERY_EXIF_H
 #define _REFINERY_EXIF_H
 
+#include <streambuf>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,26 @@ class InMemoryExifData : public ExifData {
 public:
   InMemoryExifData();
   ~InMemoryExifData();
+
+  virtual bool hasKey(const char* key) const;
+  virtual std::string getString(const char* key) const;
+  virtual void getBytes(const char* key, std::vector<byte>& outBytes) const;
+  virtual int getInt(const char* key) const;
+  virtual float getFloat(const char* key) const;
+
+  virtual void setString(const char* key, const std::string& s);
+};
+
+class DcrawExifData : public ExifData {
+  class Impl;
+  Impl* impl;
+
+public:
+  DcrawExifData(std::streambuf& istream);
+  DcrawExifData(FILE* f);
+  ~DcrawExifData();
+
+  const char* mime_type() const;
 
   virtual bool hasKey(const char* key) const;
   virtual std::string getString(const char* key) const;

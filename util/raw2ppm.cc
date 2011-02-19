@@ -19,7 +19,6 @@
  */
 
 #include "refinery/exif.h"
-#include "refinery/exif_exiv2.h"
 #include "refinery/filters.h"
 #include "refinery/gamma.h"
 #include "refinery/image.h"
@@ -33,10 +32,6 @@
 #include <iostream>
 #include <memory>
 
-#include <exiv2/exif.hpp>
-#include <exiv2/image.hpp>
-#include <exiv2/tags.hpp>
-
 using namespace refinery;
 
 int main(int argc, char **argv)
@@ -46,25 +41,16 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  Exiv2::Image::AutoPtr exivImage(Exiv2::ImageFactory::open(argv[1]));
-  assert(exivImage.get() != 0);
-
-  exivImage->readMetadata();
-  Exiv2::ExifData& exiv2ExifData(exivImage->exifData());
-  if (exiv2ExifData.empty()) {
-    throw Exiv2::Error(1, std::string(argv[1]) + " is missing Exif data");
-  }
-
-  Exiv2ExifData exifData(exiv2ExifData);
-
   std::filebuf fb;
   fb.open(argv[1], std::ios::in | std::ios::binary);
 
+  refinery::DcrawExifData exifData(fb);
+
   ImageReader reader;
 
-  int width = exivImage->pixelWidth();
-  int height = exivImage->pixelHeight();
-  const char* mimeType = exivImage->mimeType().c_str();
+  int width = exifData.getInt("Exif.SubImage2.ImageWidth");
+  int height = exifData.getInt("Exif.SubImage2.ImageLength");
+  const char* mimeType = exifData.mime_type();
 
   std::auto_ptr<GrayImage> grayImagePtr(
       reader.readGrayImage(fb, mimeType, width, height, exifData));

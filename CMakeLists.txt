@@ -38,11 +38,9 @@ if (LICENSE_GPL)
 endif()
 
 # Binaries
-if (LICENSE_GPL)
-  add_executable(bin/raw2ppm util/licensed/gpl/raw2ppm.cc)
-  add_dependencies(bin/raw2ppm refinery-0.1)
-  target_link_libraries(bin/raw2ppm exiv2 refinery-0.1)
-endif()
+add_executable(bin/raw2ppm util/raw2ppm.cc)
+add_dependencies(bin/raw2ppm refinery-0.1)
+target_link_libraries(bin/raw2ppm refinery-0.1)
 
 # Testing
 enable_testing()
