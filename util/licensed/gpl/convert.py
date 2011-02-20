@@ -82,15 +82,10 @@ def convert(infile, outfile):
   exivImage.read()
   exifData = PyExifData(exivImage)
 
-  width = exivImage['Exif.SubImage2.ImageWidth'].value
-  height = exivImage['Exif.SubImage2.ImageLength'].value
-  mimeType = exivImage.mime_type
-
-  print('Reading grayscale image (%s, %dx%d)' % (mimeType, width, height))
-  f = open(infile)
-
+  print('Reading grayscale image...')
   reader = refinery.ImageReader()
-  grayImage = reader.readGrayImage(f, mimeType, width, height, exifData)
+  f = open(infile)
+  grayImage = reader.readGrayImage(f, exifData)
 
   print('Scaling to full 16-bit color...')
   refinery.ScaleColorsFilter().filter(grayImage)
@@ -109,6 +104,8 @@ def convert(infile, outfile):
 
   if using_pil:
     print('Transforming into Python Imaging Library (PIL) Image...')
+    width = rgbImage.width()
+    height = rgbImage.height()
     ba = bytes('\0') * (width * height * 3)
     rgbImage.fillRgb8(ba)
     pilImage = PIL.Image.fromstring('RGB', (width, height), ba)

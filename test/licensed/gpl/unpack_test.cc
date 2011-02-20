@@ -48,7 +48,6 @@ TEST(ImageReaderTest, NikonD5000) {
 
   int width = exivImage->pixelWidth();
   int height = exivImage->pixelHeight();
-  const char* mimeType = exivImage->mimeType().c_str();
 
   std::filebuf fb;
   fb.open(path, std::ios::in | std::ios::binary);
@@ -56,7 +55,7 @@ TEST(ImageReaderTest, NikonD5000) {
   refinery::ImageReader reader;
 
   std::auto_ptr<refinery::GrayImage> grayImagePtr(
-      reader.readGrayImage(fb, mimeType, width, height, exifData));
+      reader.readGrayImage(fb, exifData));
   const refinery::GrayImage& image(*grayImagePtr);
 
   EXPECT_EQ(height, image.height());
@@ -93,8 +92,7 @@ TEST(ImageReaderTest, Ppm16Bit) {
   refinery::ImageReader reader;
 
   refinery::InMemoryExifData exifData;
-  std::auto_ptr<refinery::RGBImage> imagePtr(
-      reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
+  std::auto_ptr<refinery::RGBImage> imagePtr(reader.readRgbImage(fb, exifData));
   const refinery::RGBImage& image(*imagePtr);
 
   EXPECT_EQ(101266, fb.pubseekoff(0, std::ios::cur));

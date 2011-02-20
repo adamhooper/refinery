@@ -17,7 +17,7 @@ typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
 class ImageReader {
 public:
   /**
-   * Returns a new Image based on the input.
+   * Returns a new TypedImage based on the input.
    *
    * When reading is done, the stream will be seeked one byte past the last
    * byte in the image.
@@ -30,19 +30,11 @@ public:
    * FIXME: readRgbImage() only makes sense for PPM (or some unusual RAW files).
    * Clarify API.
    */
-  GrayImage* readGrayImage(
-      std::streambuf& istream, const char* mimeType,
-      int width, int height, const ExifData& exifData);
-  GrayImage* readGrayImage(
-      FILE* istream, const char* mimeType,
-      int width, int height, const ExifData& exifData);
+  GrayImage* readGrayImage(std::streambuf& istream, const ExifData& exifData);
+  GrayImage* readGrayImage(FILE* istream, const ExifData& exifData);
 
-  RGBImage* readRgbImage(
-      std::streambuf& istream, const char* mimeType,
-      int width, int height, const ExifData& exifData);
-  RGBImage* readRgbImage(
-      FILE* istream, const char* mimeType,
-      int width, int height, const ExifData& exifData);
+  RGBImage* readRgbImage(std::streambuf& istream, const ExifData& exifData);
+  RGBImage* readRgbImage(FILE* istream, const ExifData& exifData);
 };
 
 }

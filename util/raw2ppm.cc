@@ -47,13 +47,7 @@ int main(int argc, char **argv)
   refinery::DcrawExifData exifData(fb);
 
   ImageReader reader;
-
-  int width = exifData.getInt("Exif.SubImage2.ImageWidth");
-  int height = exifData.getInt("Exif.SubImage2.ImageLength");
-  const char* mimeType = exifData.mime_type();
-
-  std::auto_ptr<GrayImage> grayImagePtr(
-      reader.readGrayImage(fb, mimeType, width, height, exifData));
+  std::auto_ptr<GrayImage> grayImagePtr(reader.readGrayImage(fb, exifData));
 
   ScaleColorsFilter scaleFilter;
   scaleFilter.filter(*grayImagePtr);

@@ -18,18 +18,16 @@ namespace unpack {
   class Unpacker {
   public:
     virtual GrayImage* unpackGrayImage(
-        std::streambuf& is, int width, int height,
-        const ExifData& exifData) = 0;
+        std::streambuf& is, const ExifData& exifData) const = 0;
     virtual RGBImage* unpackRgbImage(
-        std::streambuf& is, int width, int height,
-        const ExifData& exifData) = 0;
+        std::streambuf& is, const ExifData& exifData) const = 0;
   };
 
   class PpmUnpacker : public Unpacker {
   private:
     // Sets width, height, bpp and advances the file pointer to the pixel data
     void unpackHeader(
-        std::streambuf& is, int& outWidth, int& outHeight, int& outBpp)
+        std::streambuf& is, int& outWidth, int& outHeight, int& outBpp) const
     {
       const int HEADER_SIZE = 22; // usually overkill
       char buf[HEADER_SIZE];
@@ -55,7 +53,7 @@ namespace unpack {
     }
 
     void copyShorts(
-        std::streambuf& is, unsigned int nValues, unsigned short* out)
+        std::streambuf& is, unsigned int nValues, unsigned short* out) const
     {
       while (nValues--) {
         uint16_t msb = static_cast<unsigned char>(is.sbumpc());
@@ -66,7 +64,7 @@ namespace unpack {
     }
 
     void copyChars(
-        std::streambuf& is, unsigned int nValues, unsigned short* out)
+        std::streambuf& is, unsigned int nValues, unsigned short* out) const
     {
       while (nValues--) {
         unsigned char c = static_cast<unsigned char>(is.sbumpc());
@@ -77,13 +75,15 @@ namespace unpack {
 
   public:
     virtual RGBImage* unpackRgbImage(
-        std::streambuf& is, int width, int height, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       // This will give a NullCamera
       CameraData cameraData(
           CameraDataFactory::instance().getCameraData(exifData));
 
       int bpp;
+      int width;
+      int height;
       unpackHeader(is, width, height, bpp);
 
       std::auto_ptr<RGBImage> image(new RGBImage(cameraData, width, height));
@@ -104,7 +104,7 @@ namespace unpack {
     }
 
     virtual GrayImage* unpackGrayImage(
-        std::streambuf& is, int width, int height, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       return 0;
     }
@@ -195,12 +195,12 @@ namespace unpack {
       }
     };
 
-    unsigned int getBitsPerSample(const ExifData& exifData)
+    unsigned int getBitsPerSample(const ExifData& exifData) const
     {
       return exifData.getInt("Exif.SubImage2.BitsPerSample");
     }
 
-    unsigned int getDataOffset(const ExifData& exifData)
+    unsigned int getDataOffset(const ExifData& exifData) const
     {
       return exifData.getInt("Exif.SubImage2.StripOffsets");
     }
@@ -211,14 +211,14 @@ namespace unpack {
      * Seek with the input stream, then read with the decoder.
      */
     virtual HuffmanDecoder* getDecoder(
-        std::streambuf& is, const ExifData& exifData) = 0;
+        std::streambuf& is, const ExifData& exifData) const = 0;
 
     /*
      * For files with a "split" (after the linearization table in Exif data),
      * this is what to use after the split.
      */
     virtual HuffmanDecoder* getDecoder2(
-        std::streambuf& is, const ExifData& exifData) {
+        std::streambuf& is, const ExifData& exifData) const {
       return getDecoder(is, exifData);
     }
 
@@ -226,7 +226,7 @@ namespace unpack {
      * Nikons use six Huffman tables. getDecoder() and getDecoder2() can call
      * this method to create the right one.
      */
-    HuffmanDecoder* createDecoder(std::streambuf& is, int key)
+    HuffmanDecoder* createDecoder(std::streambuf& is, int key) const
     {
       static const unsigned char NIKON_TREE[][32] = { // dcraw.c
         { 0,1,5,1,1,1,1,1,1,2,0,0,0,0,0,0,  /* 12-bit lossy */
@@ -244,7 +244,7 @@ namespace unpack {
       return new HuffmanDecoder(is, NIKON_TREE[key]);
     }
 
-    inline int decodeDiff(HuffmanDecoder& decoder)
+    inline int decodeDiff(HuffmanDecoder& decoder) const
     {
       int i = decoder.nextHuffmanValue();
       int len = i & 0xf;
@@ -263,12 +263,14 @@ namespace unpack {
 
   public:
     virtual GrayImage* unpackGrayImage(
-        std::streambuf& is, int width, int height, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       CameraData cameraData(
           CameraDataFactory::instance().getCameraData(exifData));
 
       int bitsPerSample = getBitsPerSample(exifData);
+      int width = cameraData.rawWidth();
+      int height = cameraData.rawHeight();
 
       const LinearizationCurve curve(exifData, bitsPerSample);
 
@@ -330,7 +332,7 @@ namespace unpack {
     }
 
     virtual RGBImage* unpackRgbImage(
-        std::streambuf& is, int width, int height, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       return 0;
     }
@@ -339,13 +341,13 @@ namespace unpack {
   class NefCompressedLossy2Unpacker : public NefCompressedUnpacker {
   protected:
     virtual HuffmanDecoder* getDecoder(
-        std::streambuf& is, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       return createDecoder(is, 0);
     }
 
     virtual HuffmanDecoder* getDecoder2(
-        std::streambuf& is, const ExifData& exifData)
+        std::streambuf& is, const ExifData& exifData) const
     {
       return createDecoder(is, 1);
     }
@@ -353,34 +355,27 @@ namespace unpack {
 
   class UnpackerFactory {
   public:
-    static Unpacker* createUnpacker(
-        const char* mimeType, const ExifData& exifData)
+    static Unpacker* createUnpacker(const ExifData& exifData)
     {
-      std::string sMimeType(mimeType);
-
-      if (sMimeType == "image/x-portable-pixmap") {
+      if (!exifData.hasKey("Exif.Image.Model")) {
         return new PpmUnpacker();
-      } else if (sMimeType == "image/tiff"
-                 || sMimeType == "image/x-nikon-nef") {
+      } else {
         // for now...
         return new NefCompressedLossy2Unpacker();
       }
-
-      return 0;
     }
   };
 
 }
 
 GrayImage* ImageReader::readGrayImage(
-    std::streambuf& istream, const char* mimeType,
-    int width, int height, const ExifData& exifData)
+    std::streambuf& istream, const ExifData& exifData)
 {
   std::auto_ptr<unpack::Unpacker> unpacker(
-      unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
+      unpack::UnpackerFactory::createUnpacker(exifData));
 
   std::auto_ptr<GrayImage> ret(
-      unpacker->unpackGrayImage(istream, width, height, exifData));
+      unpacker->unpackGrayImage(istream, exifData));
 
   // Gotta admit, I don't know what this does :). dcraw has it.
   unsigned int filters(ret->filters());
@@ -389,30 +384,25 @@ GrayImage* ImageReader::readGrayImage(
   return ret.release();
 }
 
-GrayImage* ImageReader::readGrayImage(
-    FILE* istream, const char* mimeType,
-    int width, int height, const ExifData& exifData)
+GrayImage* ImageReader::readGrayImage(FILE* istream, const ExifData& exifData)
 {
   c_file_istreambuf istreambuf(istream);
-  return readGrayImage(istreambuf, mimeType, width, height, exifData);
+  return readGrayImage(istreambuf, exifData);
 }
 
 RGBImage* ImageReader::readRgbImage(
-    std::streambuf& istream, const char* mimeType,
-    int width, int height, const ExifData& exifData)
+    std::streambuf& istream, const ExifData& exifData)
 {
   std::auto_ptr<unpack::Unpacker> unpacker(
-      unpack::UnpackerFactory::createUnpacker(mimeType, exifData));
+      unpack::UnpackerFactory::createUnpacker(exifData));
 
-  return unpacker->unpackRgbImage(istream, width, height, exifData);
+  return unpacker->unpackRgbImage(istream, exifData);
 }
 
-RGBImage* ImageReader::readRgbImage(
-    FILE* istream, const char* mimeType,
-    int width, int height, const ExifData& exifData)
+RGBImage* ImageReader::readRgbImage(FILE* istream, const ExifData& exifData)
 {
   c_file_istreambuf istreambuf(istream);
-  return readRgbImage(istreambuf, mimeType, width, height, exifData);
+  return readRgbImage(istreambuf, exifData);
 }
 
 } // namespace refinery

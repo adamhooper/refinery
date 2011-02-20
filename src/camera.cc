@@ -647,6 +647,14 @@ namespace CameraModels {
     {
       return 0x55555555;
     }
+    virtual unsigned int rawWidth(const ExifData& exifData) const
+    {
+      return 256;
+    }
+    virtual unsigned int rawHeight(const ExifData& exifData) const
+    {
+      return 256;
+    }
     virtual unsigned int colors() const { return 3; }
     virtual ColorConversionData colorConversionData() const
     {
@@ -669,6 +677,12 @@ namespace CameraModels {
       }
 
       return exifData.getInt("Exif.Image.Orientation");
+    }
+    virtual unsigned int rawWidth(const ExifData& exifData) const {
+      return exifData.getInt("Exif.SubImage2.ImageWidth");
+    }
+    virtual unsigned int rawHeight(const ExifData& exifData) const {
+      return exifData.getInt("Exif.SubImage2.ImageLength");
     }
     virtual unsigned int filters(const ExifData& exifData) const {
       /*
@@ -720,6 +734,16 @@ unsigned int CameraData::filters() const
 unsigned int CameraData::colors() const
 {
   return mCamera.colors();
+}
+
+unsigned int CameraData::rawWidth() const
+{
+  return mCamera.rawWidth(mExifData);
+}
+
+unsigned int CameraData::rawHeight() const
+{
+  return mCamera.rawHeight(mExifData);
 }
 
 Camera::ColorConversionData CameraData::colorConversionData() const

@@ -61,6 +61,30 @@ public:
   virtual unsigned int colors() const = 0;
 
   /**
+   * The width of the raw image, in pixels.
+   *
+   * This is different from width(), which is the width of the output image.
+   * Some cameras capture margin pixels which have no value at all, and this
+   * width includes those.
+   *
+   * \param[in] exifData the Exif data.
+   * \return How many pixels are in each sensor row.
+   */
+  virtual unsigned int rawWidth(const ExifData& exifData) const = 0;
+
+  /**
+   * The height of the raw image, in pixels.
+   *
+   * This is different from height(), which is the height of the output image.
+   * Some cameras capture margin pixels which have no value at all, and this
+   * height includes those.
+   *
+   * \param[in] exifData the Exif data.
+   * \return How many pixels are in each sensor column.
+   */
+  virtual unsigned int rawHeight(const ExifData& exifData) const = 0;
+
+  /**
    * Some multipliers for changing color spaces.
    *
    * \return Color conversion data.
@@ -214,6 +238,28 @@ public:
    * The number of sensor colors, typically 3 or 4.
    */
   unsigned int colors() const;
+
+  /**
+   * The width of the raw image, in pixels.
+   *
+   * This is different from width(), which is the width of the output image.
+   * Some cameras capture margin pixels which have no value at all, and this
+   * width includes those.
+   *
+   * \return How many pixels are in each sensor row.
+   */
+  unsigned int rawWidth() const;
+
+  /**
+   * The height of the raw image, in pixels.
+   *
+   * This is different from height(), which is the height of the output image.
+   * Some cameras capture margin pixels which have no value at all, and this
+   * height includes those.
+   *
+   * \return How many pixels are in each sensor column.
+   */
+  unsigned int rawHeight() const;
 
   /**
    * Some multipliers for changing color spaces.
