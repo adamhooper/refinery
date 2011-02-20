@@ -89,6 +89,7 @@ template<typename T> struct LABPixel {
 
 template<typename T> struct GrayPixel {
   typedef unsigned int ColorType;
+  static const ColorType NColors = 1;
   typedef T ValueType;
   T value;
 
@@ -98,6 +99,7 @@ template<typename T> struct GrayPixel {
   GrayPixel& operator*(double rhs) {
     return GrayPixel(value * rhs);
   }
+  inline const T& at(const ColorType& index) const { return value; }
 };
 
 template<typename T> class TypedImage {
@@ -111,7 +113,6 @@ private:
   CameraData mCameraData;
   int mWidth;
   int mHeight;
-  int mBpp; /* bytes per pixel--BAD! Don't rely on this! */
   int mFilters;
   PixelsType mPixels;
 
@@ -122,7 +123,7 @@ private:
 
 public:
   TypedImage(const CameraData& cameraData, int width, int height)
-    : mCameraData(cameraData), mWidth(width), mHeight(height), mBpp(0),
+    : mCameraData(cameraData), mWidth(width), mHeight(height),
     mFilters(mCameraData.filters())
   {
     this->allocate();
@@ -133,8 +134,6 @@ public:
   unsigned int height() const { return mHeight; }
   unsigned int nPixels() const { return mWidth * mHeight; }
   unsigned int filters() const { return mFilters; }
-  int bytesPerPixel() const { return mBpp; }
-  void setBytesPerPixel(int bpp) { mBpp = bpp; }
   void setFilters(unsigned int filters) { mFilters = filters; }
 
   ColorType colorAtPoint(const Point& point) const {

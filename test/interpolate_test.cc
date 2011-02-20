@@ -35,7 +35,6 @@ TEST(InterpolatorTest, AHDInterpolate) {
   const refinery::RGBImage& image(*imagePtr);
 
   refinery::RGBImage ref(cameraData, 225, 75);
-  ref.setBytesPerPixel(3);
 
   std::ifstream f;
   f.open("test/files/nikon_d5000_225x75_sample_ahd16.ppm");

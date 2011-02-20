@@ -70,7 +70,7 @@ namespace unpack {
     {
       while (nValues--) {
         unsigned char c = static_cast<unsigned char>(is.sbumpc());
-        *out = static_cast<unsigned short>(c);
+        *out = c << 8;
         out++;
       }
     }
@@ -87,16 +87,14 @@ namespace unpack {
       unpackHeader(is, width, height, bpp);
 
       std::auto_ptr<RGBImage> image(new RGBImage(cameraData, width, height));
-      image->setBytesPerPixel(bpp);
 
       unsigned int nValues =
-          image->width() * image->height()
-          * image->bytesPerPixel() / sizeof(RGBImage::ValueType);
+          image->nPixels() * bpp / sizeof(RGBImage::ValueType);
 
       unsigned short* shorts(
-          reinterpret_cast<unsigned short*>(&image->pixels()[0]));
+          reinterpret_cast<unsigned short*>(image->pixels()));
 
-      if (image->bytesPerPixel() == 6) {
+      if (bpp == 6) {
         copyShorts(is, nValues, shorts);
       } else {
         copyChars(is, nValues, shorts);
@@ -290,8 +288,6 @@ namespace unpack {
       std::auto_ptr<GrayImage> imagePtr(
           new GrayImage(cameraData, width, height));
       GrayImage& image(*imagePtr);
-
-      image.setBytesPerPixel(6);
 
       std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, exifData));
       int min = 0;
