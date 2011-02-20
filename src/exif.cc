@@ -634,9 +634,4 @@ float DcrawExifData::getFloat(const char* key) const
   return impl->getFloat(key);
 }
 
-void DcrawExifData::setString(const char* key, const std::string& s)
-{
-  impl->setString(key, s);
-}
-
 } // namespace refinery

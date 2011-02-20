@@ -42,8 +42,6 @@ public:
   virtual void getBytes(const char* key, std::vector<byte>& outBytes) const;
   virtual int getInt(const char* key) const;
   virtual float getFloat(const char* key) const;
-
-  virtual void setString(const char* key, const std::string& s);
 };
 
 }

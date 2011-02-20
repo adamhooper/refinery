@@ -18,8 +18,6 @@ public:
   virtual void getBytes(const char* key, std::vector<byte>& outBytes) const = 0;
   virtual int getInt(const char* key) const = 0;
   virtual float getFloat(const char* key) const = 0;
-
-  virtual void setString(const char* key, const std::string& s) = 0;
 };
 
 class InMemoryExifData : public ExifData {
@@ -55,8 +53,6 @@ public:
   virtual void getBytes(const char* key, std::vector<byte>& outBytes) const;
   virtual int getInt(const char* key) const;
   virtual float getFloat(const char* key) const;
-
-  virtual void setString(const char* key, const std::string& s);
 };
 
 } // namespace refinery

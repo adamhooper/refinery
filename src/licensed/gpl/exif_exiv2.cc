@@ -100,11 +100,6 @@ public:
     }
     return ret;
   }
-
-  void setString(const char* key, const std::string& s)
-  {
-    exiv2ExifData[key] = s;
-  }
 };
 
 Exiv2ExifData::Exiv2ExifData(Exiv2::ExifData& exiv2ExifData)
@@ -140,11 +135,6 @@ int Exiv2ExifData::getInt(const char* key) const
 float Exiv2ExifData::getFloat(const char* key) const
 {
   return impl->getFloat(key);
-}
-
-void Exiv2ExifData::setString(const char* key, const std::string& s)
-{
-  impl->setString(key, s);
 }
 
 } // namespace refinery
