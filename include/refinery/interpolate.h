@@ -34,6 +34,9 @@ typedef Image<GrayPixel<unsigned short> > GrayImage;
  */
 class Interpolator {
 public:
+  /**
+   * Algorithm, to pass to the constructor.
+   */
   enum Type {
     /**
      * For each pixel, takes the best average.
@@ -63,7 +66,7 @@ public:
   /**
    * Constructor.
    *
-   * \param[in] type Type of interpolator this is.
+   * \param[in] type Algorithm this interpolator uses.
    */
   Interpolator(const Type& type);
 
