@@ -1,0 +1,7 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$structrefinery_1_1Pixel.html" title="refinery::Pixel\&lt; T, 3 \&gt;" alt="" coords="225,110,396,143"/>
+<area shape="rect" id="node9" href="$structrefinery_1_1Pixel.html" title="refinery::Pixel\&lt; T, 1 \&gt;" alt="" coords="429,110,600,143"/>
+<area shape="rect" id="node5" href="$structrefinery_1_1LABPixel.html" title="A 3&#45;color pixel with L, A and B values." alt="" coords="5,195,192,229"/>
+<area shape="rect" id="node7" href="$structrefinery_1_1RGBPixel.html" title="A 3&#45;color pixel with R, G and B values." alt="" coords="216,195,405,229"/>
+<area shape="rect" id="node11" href="$structrefinery_1_1GrayPixel.html" title="A 1&#45;color pixel." alt="" coords="429,195,619,229"/>
+</map>

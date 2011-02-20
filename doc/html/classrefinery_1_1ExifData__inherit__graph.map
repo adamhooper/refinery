@@ -1,0 +1,5 @@
+<map id="G" name="G">
+<area shape="rect" id="node3" href="$classrefinery_1_1DcrawExifData.html" title="Exif parser copied from dcraw.c." alt="" coords="5,89,195,122"/>
+<area shape="rect" id="node5" href="$classrefinery_1_1Exiv2ExifData.html" title="Uses Exiv2 to supply Exif data." alt="" coords="219,89,403,122"/>
+<area shape="rect" id="node7" href="$classrefinery_1_1InMemoryExifData.html" title="An in&#45;memory, fake Exif data container." alt="" coords="427,89,640,122"/>
+</map>

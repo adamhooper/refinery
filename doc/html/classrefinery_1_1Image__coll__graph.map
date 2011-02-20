@@ -1,0 +1,6 @@
+<map id="G" name="G">
+<area shape="rect" id="node4" title="STL class." alt="" coords="36,110,167,143"/>
+<area shape="rect" id="node8" href="$classrefinery_1_1CameraData.html" title="A Camera coupled with one photo&#39;s ExifData." alt="" coords="221,214,395,247"/>
+<area shape="rect" id="node10" href="$classrefinery_1_1ExifData.html" title="Holds Exif information for an image." alt="" coords="213,110,357,143"/>
+<area shape="rect" id="node12" href="$classrefinery_1_1Camera.html" title="Holds static data about an actual camera model." alt="" coords="381,110,520,143"/>
+</map>
