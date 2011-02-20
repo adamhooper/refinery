@@ -15,15 +15,19 @@ namespace refinery {
 
 namespace unpack {
 
-  class Unpacker {
+  class GrayUnpacker {
   public:
     virtual GrayImage* unpackGrayImage(
         std::streambuf& is, const ExifData& exifData) const = 0;
+  };
+
+  class RgbUnpacker {
+  public:
     virtual RGBImage* unpackRgbImage(
         std::streambuf& is, const ExifData& exifData) const = 0;
   };
 
-  class PpmUnpacker : public Unpacker {
+  class PpmUnpacker : public RgbUnpacker {
   private:
     // Sets width, height, bpp and advances the file pointer to the pixel data
     void unpackHeader(
@@ -102,15 +106,9 @@ namespace unpack {
 
       return image.release();
     }
-
-    virtual GrayImage* unpackGrayImage(
-        std::streambuf& is, const ExifData& exifData) const
-    {
-      return 0;
-    }
   };
 
-  class NefCompressedUnpacker : public Unpacker {
+  class NefCompressedUnpacker : public GrayUnpacker {
   protected:
     /*
      * The linearization curve, read from Exif data, is a lookup table. In goes
@@ -330,12 +328,6 @@ namespace unpack {
 
       return imagePtr.release();
     }
-
-    virtual RGBImage* unpackRgbImage(
-        std::streambuf& is, const ExifData& exifData) const
-    {
-      return 0;
-    }
   };
 
   class NefCompressedLossy2Unpacker : public NefCompressedUnpacker {
@@ -355,14 +347,13 @@ namespace unpack {
 
   class UnpackerFactory {
   public:
-    static Unpacker* createUnpacker(const ExifData& exifData)
+    static GrayUnpacker* createGrayUnpacker(const ExifData& exifData)
     {
-      if (!exifData.hasKey("Exif.Image.Model")) {
-        return new PpmUnpacker();
-      } else {
-        // for now...
-        return new NefCompressedLossy2Unpacker();
-      }
+      // for now...
+      return new NefCompressedLossy2Unpacker();
+    }
+    static RgbUnpacker* createRgbUnpacker(const ExifData& exifData) {
+      return new PpmUnpacker();
     }
   };
 
@@ -371,8 +362,8 @@ namespace unpack {
 GrayImage* ImageReader::readGrayImage(
     std::streambuf& istream, const ExifData& exifData)
 {
-  std::auto_ptr<unpack::Unpacker> unpacker(
-      unpack::UnpackerFactory::createUnpacker(exifData));
+  std::auto_ptr<unpack::GrayUnpacker> unpacker(
+      unpack::UnpackerFactory::createGrayUnpacker(exifData));
 
   std::auto_ptr<GrayImage> ret(
       unpacker->unpackGrayImage(istream, exifData));
@@ -393,8 +384,8 @@ GrayImage* ImageReader::readGrayImage(FILE* istream, const ExifData& exifData)
 RGBImage* ImageReader::readRgbImage(
     std::streambuf& istream, const ExifData& exifData)
 {
-  std::auto_ptr<unpack::Unpacker> unpacker(
-      unpack::UnpackerFactory::createUnpacker(exifData));
+  std::auto_ptr<unpack::RgbUnpacker> unpacker(
+      unpack::UnpackerFactory::createRgbUnpacker(exifData));
 
   return unpacker->unpackRgbImage(istream, exifData);
 }
