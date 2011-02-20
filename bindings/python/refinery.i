@@ -54,7 +54,7 @@ namespace std {
 
 %warnfilter(389) refinery::RGBPixel::operator[];
 %include "refinery/image.h"
-%warnfilter(302) refinery::Image;
+%warnfilter(302) refinery::RGBImage;
 %warnfilter(302) refinery::GrayImage;
 %extend refinery::TypedImage {
   void fillRgb8(char* rgb8) const {
@@ -77,7 +77,8 @@ namespace std {
     }
   }
 };
-%template(Image) refinery::TypedImage<refinery::u16RGBPixel>;
+%template(RGBImage) refinery::TypedImage<refinery::u16RGBPixel>;
+%template(GrayImage) refinery::TypedImage<refinery::u16GrayPixel>;
 
 %include "refinery/color.h"
 
