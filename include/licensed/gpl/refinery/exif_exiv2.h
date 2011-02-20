@@ -29,13 +29,41 @@ namespace Exiv2 {
 
 namespace refinery {
 
+/**
+ * Uses Exiv2 to supply Exif data.
+ *
+ * Exiv2 is complete and has a useful API, but its license is GPL and so any
+ * code that links to it must use a GPL-compatible license.
+ *
+ * This is a shallow wrapper around the Exiv2 data, so the original Exiv2 data
+ * must exist for the lifetime of this object.
+ *
+ * When the header is included, Exiv2ExifData can be initialized automatically
+ * where an ExifData is expected, as in the following example:
+ *
+ * \code
+ * Exiv2::Image::AutoPtr exivImage(Exiv2::ImageFactory::open("image.NEF"));
+ * // assert exivImage.get() != 0
+ * exivImage->readMetadata();
+ * const Exiv2::ExifData& exivData(exivImage->exifData());
+ * // assert !exivData.empty()
+ * refinery::ImageReader reader;
+ * std::auto_ptr<GrayImage> grayImagePtr(
+ *   reader.readGrayImage(fb, exivData)); // exivData converts to an ExifData
+ * \endcode
+ */
 class Exiv2ExifData : public ExifData {
   class Impl;
   Impl* impl;
 
 public:
+  /**
+   * constructor.
+   *
+   * \param exiv2ExifData The Exiv2 data.
+   */
   Exiv2ExifData(Exiv2::ExifData& exiv2ExifData);
-  ~Exiv2ExifData();
+  ~Exiv2ExifData(); /**< destructor. */
 
   virtual bool hasKey(const char* key) const;
   virtual std::string getString(const char* key) const;
