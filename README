@@ -10,7 +10,7 @@ Bugs: https://github.com/adamh/refinery/issues
 EXAMPLE
 =======
 
-Read util/licensed/gpl/raw2ppm.cc: it reads a raw file and outputs a PPM image.
+Read util/raw2ppm.cc: it reads a raw file and outputs a PPM image.
 
 util/licensed/gpl/raw2ppm.py does the same thing in Python
 
@@ -24,3 +24,7 @@ To regenerate the Makefile, run "cmake -D CMAKE_BUILD_TYPE=Release .".
 To make a debug-suited Makefile, use "Debug" instead of "Release".
 
 Finally, "make" and (if installing) "sudo make install".
+
+Then, to convert images, use "raw2ppm RAWFILE PPM".
+
+Better yet, explore the API and fit refinery into your own project.
