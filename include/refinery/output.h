@@ -32,7 +32,7 @@ public:
    * Writes an image as PPM to an output stream.
    *
    * \param[in] image 16-bit RGB image.
-   * \param[in] ostream Output filename where PPM data will be written.
+   * \param[in] filename Output filename where PPM data will be written.
    * \param[in] colorDepth 8 or 16, for 8-bit or 16-bit output.
    */
   void writeImage(
