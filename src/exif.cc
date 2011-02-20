@@ -245,6 +245,7 @@ class DcrawExifData::Impl : public InMemoryExifDataMixin {
       ifp = 0;
       ifname = "";
       shot_select = 0;
+      order = 0;
       d65_white[0] = 0.950456;
       d65_white[1] = 1;
       d65_white[2] = 1.088754;
