@@ -6,6 +6,8 @@ cmake_install.cmake
 install_manifest.txt
 bin/*
 lib/*
+doc/Doxyfile
+doc/html/
 test/gtest_main
 *.swp
 *.pyc
