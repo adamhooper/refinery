@@ -34,36 +34,52 @@ public:
 
   /**
    * The make of the camera, for example "NIKON".
+   *
+   * \return An immutable C string, like "NIKON".
    */
   virtual const char* make() const = 0;
 
   /**
    * The model of the camera, for example "D5000".
+   *
+   * \return An immutable C string, like "D5000".
    */
   virtual const char* model() const = 0;
 
   /**
    * The make + model of the camera, for example "NIKON D5000".
+   *
+   * \return An immutable C string, like "NIKON D5000".
    */
   virtual const char* name() const = 0;
 
   /**
    * The number of sensor colors, typically 3 or 4.
+   *
+   * \return The number of colors, 3 or 4.
    */
   virtual unsigned int colors() const = 0;
 
   /**
    * Some multipliers for changing color spaces.
+   *
+   * \return Color conversion data.
    */
   virtual ColorConversionData colorConversionData() const = 0;
 
   /**
    * The Exif "Orientation", from 1 to 8, saying how one image is flipped.
+   *
+   * \param[in] exifData the Exif data.
+   * \return An integer from 1 to 8.
    */
   virtual unsigned int orientation(const ExifData& exifData) const = 0;
 
   /**
    * Returns \c true if this is the right Camera for exifData.
+   *
+   * \param[in] exifData the Exif data.
+   * \return \c true if this Camera shot a photo with this ExifData.
    */
   virtual bool canHandle(const ExifData& exifData) const = 0;
 };
@@ -87,6 +103,9 @@ public:
    *
    * The Camera and ExifData are both passed by reference and must exist for
    * the lifetime of this CameraData.
+   *
+   * \param[in] camera The static camera data.
+   * \param[in] exifData The photograph's Exif data.
    */
   CameraData(const Camera& camera, const ExifData& exifData)
       : mCamera(camera), mExifData(exifData) {}
@@ -95,6 +114,8 @@ public:
    * Copy constructor.
    *
    * The Camera and ExifData are both passed by reference.
+   *
+   * \param[in] rhs Original CameraData.
    */
   CameraData(const CameraData& rhs)
       : mCamera(rhs.camera()), mExifData(rhs.exifData()) {}
@@ -159,6 +180,9 @@ public:
    * If no known real-world camera could have produced the given Exif data
    * (that is, if a computer program did it), a Camera will still be returned.
    * It's called the NullCamera, and there's nothing special about it.
+   *
+   * \param[in] exifData A photograph's Exif data.
+   * \return A Camera which could take this photograph.
    */
   const Camera& detectCamera(const ExifData& exifData) const;
 };
@@ -187,6 +211,9 @@ public:
    * Returns a CameraData object which helps explain a photo's properties.
    *
    * The ExifData must exist for the lifetime of the returned CameraData.
+   *
+   * \param[in] exifData A photograph's Exif data.
+   * \return A CameraData for this photograph.
    */
   CameraData getCameraData(const ExifData& exifData) const;
 };
