@@ -52,11 +52,11 @@ namespace std {
 
 %include "refinery/exif.h"
 
-%warnfilter(389) refinery::RGBPixel::operator[];
+%warnfilter(389) refinery::Pixel::operator[];
 %include "refinery/image.h"
 %warnfilter(302) refinery::RGBImage;
 %warnfilter(302) refinery::GrayImage;
-%extend refinery::TypedImage {
+%extend refinery::Image {
   void fillRgb8(char* rgb8) const {
     typedef T PixelType;
     typedef typename PixelType::ValueType ValueType;
@@ -77,8 +77,8 @@ namespace std {
     }
   }
 };
-%template(RGBImage) refinery::TypedImage<refinery::u16RGBPixel>;
-%template(GrayImage) refinery::TypedImage<refinery::u16GrayPixel>;
+%template(RGBImage) refinery::Image<refinery::u16RGBPixel>;
+%template(GrayImage) refinery::Image<refinery::u16GrayPixel>;
 
 %include "refinery/color.h"
 

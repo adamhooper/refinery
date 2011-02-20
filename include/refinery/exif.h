@@ -10,7 +10,7 @@ namespace refinery {
 /**
  * Holds Exif information for an image.
  *
- * This data is passed to the TypedImage constructor, after which any Exif
+ * This data is passed to the Image constructor, after which any Exif
  * information is only accessed through the image's CameraData.
  *
  * This is a virtual class because several strategies exist for parsing Exif

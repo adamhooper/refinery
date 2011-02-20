@@ -6,8 +6,8 @@
 namespace refinery {
 
 template<typename T> class RGBPixel;
-template<typename T> class TypedImage;
-typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
+template<typename T> class Image;
+typedef Image<RGBPixel<unsigned short> > RGBImage;
 
 /**
  * Outputs images in PPM format.

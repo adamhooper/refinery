@@ -328,7 +328,7 @@ struct GrayPixel : public Pixel<T, 1> {
  * \tparam T The type of Pixel in the grid (use a Pixel).
  */
 template<typename T>
-class TypedImage {
+class Image {
 public:
   typedef T PixelType; /**< Type of each pixel. */
   typedef typename T::ValueType ValueType; /**< Color value type. */
@@ -358,7 +358,7 @@ public:
    * \param[in] width Image width in pixels.
    * \param[in] height Image height in pixels.
    */
-  TypedImage(const CameraData& cameraData, int width, int height)
+  Image(const CameraData& cameraData, int width, int height)
     : mCameraData(cameraData), mWidth(width), mHeight(height),
     mFilters(mCameraData.filters())
   {
@@ -397,7 +397,7 @@ public:
    *
    * Even in a fully-interpolated RGB image, it's sometimes useful to know
    * which color value is exact and which are interpolated. This method will
-   * tell that for any type TypedImage.
+   * tell that for any type Image.
    *
    * \param[in] point Point in question.
    * \return Color in the sensor array, as reported by the camera.
@@ -412,7 +412,7 @@ public:
    *
    * Even in a fully-interpolated RGB image, it's sometimes useful to know
    * which color value is exact and which are interpolated. This method will
-   * tell that for any type TypedImage.
+   * tell that for any type Image.
    *
    * \param[in] row Pixel row (from the top).
    * \param[in] col Pixel column (from the left).
@@ -427,7 +427,7 @@ public:
    *
    * Example: convert an RGB image to BGR
    * \code
-   * typedef TypedImage<Pixel<unsigned char, 3> > ImageType;
+   * typedef Image<Pixel<unsigned char, 3> > ImageType;
    * CameraData cameraData = findCameraDataSomehow();
    * ImageType image(cameraData, 100, 100);
    * // fill in image...
@@ -550,9 +550,9 @@ typedef RGBPixel<unsigned short> u16RGBPixel;
 typedef LABPixel<short> s16LABPixel;
 typedef GrayPixel<unsigned short> u16GrayPixel;
 
-typedef TypedImage<u16RGBPixel> RGBImage;
-typedef TypedImage<s16LABPixel> LABImage;
-typedef TypedImage<u16GrayPixel> GrayImage;
+typedef Image<u16RGBPixel> RGBImage;
+typedef Image<s16LABPixel> LABImage;
+typedef Image<u16GrayPixel> GrayImage;
 
 }; /* namespace refinery */
 

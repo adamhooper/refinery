@@ -17,8 +17,8 @@ namespace refinery {
  * Coarseness of 0 makes for an exact (but sometimes slower or less handy)
  * histogram.
  *
- * \tparam ImageType TypedImage instance.
- * \tparam Coarseness Shrinking option. For 16-bit TypedImage, 3 is nice.
+ * \tparam ImageType Image instance.
+ * \tparam Coarseness Shrinking option. For 16-bit Image, 3 is nice.
  */
 template<typename ImageType, unsigned int Coarseness = 0>
 class Histogram {

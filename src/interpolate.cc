@@ -185,10 +185,11 @@ private:
       return index == 0 ? h : v;
     }
   };
-  typedef TypedImage<HomogeneityPixel> HomogeneityImage;
-  typedef TypedImageTile<HomogeneityImage> HomogeneityTile;
+  typedef Image<HomogeneityPixel> HomogeneityImage;
+  typedef ImageTile<HomogeneityImage> HomogeneityTile;
 
-  typedef TypedImageTile<RGBImage> ImageTile;
+  typedef ImageTile<RGBImage> RGBImageTile;
+  typedef ImageTile<LABImage> LABImageTile;
 
   typedef RGBImage::ColorType Color;
 
@@ -224,9 +225,6 @@ public:
   }
 
 private:
-  typedef LABPixel<short> s16LabPixel;
-  typedef TypedImage<s16LABPixel> LABImage;
-  typedef TypedImageTile<LABImage> LABImageTile;
 
   /**
    * Returns cbrt(f/65536), unless f is <= 580 in which case it's a linear
@@ -270,7 +268,8 @@ private:
    * get a tiny speedup).
    */
   void createGreenDirectionalImages(
-      const GrayImage& image, ImageTile& hImageTile, ImageTile& vImageTile)
+      const GrayImage& image,
+      RGBImageTile& hImageTile, RGBImageTile& vImageTile)
   {
     const unsigned int top = hImageTile.top();
     const unsigned int left = hImageTile.left();
@@ -290,8 +289,8 @@ private:
       const GrayImage::PixelType* pixBelow(&pix[width]);
       const GrayImage::PixelType* pix2Below(&pix[2 * width]);
 
-      ImageTile::PixelType* hPix(hImageTile.pixelsAtImageCoords(row, col));
-      ImageTile::PixelType* vPix(vImageTile.pixelsAtImageCoords(row, col));
+      RGBImageTile::PixelType* hPix(hImageTile.pixelsAtImageCoords(row, col));
+      RGBImageTile::PixelType* vPix(vImageTile.pixelsAtImageCoords(row, col));
 
       for (; col < right;
           col += 2, pix += 2, hPix += 2, vPix += 2,
@@ -319,8 +318,8 @@ private:
       int n, const GrayImage::PixelType* (&pix),
       const GrayImage::PixelType* (&pixAbove),
       const GrayImage::PixelType* (&pixBelow),
-      const ImageTile::PixelType* (&dPixAbove),
-      const ImageTile::PixelType* (&dPixBelow))
+      const RGBImageTile::PixelType* (&dPixAbove),
+      const RGBImageTile::PixelType* (&dPixBelow))
   {
     pix += n;
     pixAbove += n;
@@ -330,12 +329,12 @@ private:
   }
 
   inline void fillRandBinGPixel(
-      ImageTile::PixelType* dPix, const Color rowC, const Color colC,
+      RGBImageTile::PixelType* dPix, const Color rowC, const Color colC,
       const GrayImage::PixelType* pix,
       const GrayImage::PixelType* pixAbove,
       const GrayImage::PixelType* pixBelow,
-      const ImageTile::PixelType* dPixAbove,
-      const ImageTile::PixelType* dPixBelow)
+      const RGBImageTile::PixelType* dPixAbove,
+      const RGBImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
         pix[0].value() + // G
@@ -351,12 +350,12 @@ private:
   }
 
   inline void fillRandBinBorRPixel(
-      ImageTile::PixelType* dPix, const Color rowC, const Color colC,
+      RGBImageTile::PixelType* dPix, const Color rowC, const Color colC,
       const GrayImage::PixelType* pix,
       const GrayImage::PixelType* pixAbove,
       const GrayImage::PixelType* pixBelow,
-      const ImageTile::PixelType* dPixAbove,
-      const ImageTile::PixelType* dPixBelow)
+      const RGBImageTile::PixelType* dPixAbove,
+      const RGBImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
         dPix[0].g() + // G
@@ -368,7 +367,7 @@ private:
     dPix[0][colC] = clamp16(colCValue);
   }
 
-  void fillDirectionalImage(const GrayImage& image, ImageTile& dirImageTile)
+  void fillDirectionalImage(const GrayImage& image, RGBImageTile& dirImageTile)
   {
     const unsigned int top = dirImageTile.top() + 1;
     const unsigned int left = dirImageTile.left() + 1;
@@ -411,10 +410,10 @@ private:
         colC = 2 - c;
       }
 
-      ImageTile::PixelType* dPix(
+      RGBImageTile::PixelType* dPix(
           &dirImageTile.pixelsAtImageCoords(row, left + (c != G))[0]);
-      const ImageTile::PixelType* dPixAbove(&dPix[-dWidth]);
-      const ImageTile::PixelType* dPixBelow(&dPix[dWidth]);
+      const RGBImageTile::PixelType* dPixAbove(&dPix[-dWidth]);
+      const RGBImageTile::PixelType* dPixBelow(&dPix[dWidth]);
 
       const GrayImage::PixelType* pix(
           image.constPixelsAtPoint(row, left + (c != G)));
@@ -473,7 +472,7 @@ private:
   }
 
   void createCielabImage(
-      const ImageTile& imageTile, LABImageTile& labImageTile,
+      const RGBImageTile& imageTile, LABImageTile& labImageTile,
       const float (&cameraToXyz)[3][4])
   {
     const unsigned int top = imageTile.top() + 1;
@@ -482,7 +481,7 @@ private:
     const unsigned int bottom = imageTile.bottom() - 1;
 
     for (unsigned int row = top; row < bottom; row++) {
-      const ImageTile::PixelType* pix(
+      const RGBImageTile::PixelType* pix(
           &imageTile.constPixelsAtImageCoords(row, left)[0]);
 
       LABImageTile::PixelType* lPix(
@@ -583,7 +582,8 @@ private:
   }
 
   void fillImage(
-      RGBImage& rgbImage, const ImageTile& hImageTile, const ImageTile& vImageTile,
+      RGBImage& rgbImage,
+      const RGBImageTile& hImageTile, const RGBImageTile& vImageTile,
       HomogeneityTile& homoTile)
   {
     const unsigned int top = hImageTile.top() + 3;
@@ -620,9 +620,9 @@ private:
 
       const HomogeneityTile::PixelType* homoPix(
           homoTile.constPixelsAtImageCoords(row, left));
-      const ImageTile::PixelType* hPix(
+      const RGBImageTile::PixelType* hPix(
           hImageTile.constPixelsAtImageCoords(row, left));
-      const ImageTile::PixelType* vPix(
+      const RGBImageTile::PixelType* vPix(
           vImageTile.constPixelsAtImageCoords(row, left));
 
       for (unsigned int col = left; col < right;
@@ -681,8 +681,8 @@ public:
     {
       Point tileTopLeft(border - margin, border - margin);
 
-      ImageTile hImageTile(imageSize, tileTopLeft, tileSize, border, margin);
-      ImageTile vImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+      RGBImageTile hImageTile(imageSize, tileTopLeft, tileSize, border, margin);
+      RGBImageTile vImageTile(imageSize, tileTopLeft, tileSize, border, margin);
       LABImageTile hLabImageTile(
           imageSize, tileTopLeft, tileSize, border, margin);
       LABImageTile vLabImageTile(

@@ -3,11 +3,11 @@
 
 namespace refinery {
 
-template<typename T> class TypedImage;
+template<typename T> class Image;
 template<typename T> class RGBPixel;
-typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
+typedef Image<RGBPixel<unsigned short> > RGBImage;
 template<typename T> class GrayPixel;
-typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
+typedef Image<GrayPixel<unsigned short> > GrayImage;
 
 /**
  * Transforms a sensor image to an RGB or CMYK image.
@@ -16,7 +16,7 @@ typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
  * value per pixel. The other values must be added in software, by the
  * Interpolator.
  *
- * Crucial in the incoming image is the TypedImage::filters() return value,
+ * Crucial in the incoming image is the Image::filters() return value,
  * which describes which colors go where on the camera sensor array.
  *
  * There are several strategies for guessing the missing color values on each

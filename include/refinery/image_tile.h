@@ -9,7 +9,7 @@ namespace refinery {
  * \tparam T Image type.
  */
 template<typename T>
-class TypedImageTile {
+class ImageTile {
 public:
   typedef T ImageType; /**< Image type. */
   typedef typename T::PixelType PixelType; /**< Pixel type. */
@@ -47,7 +47,7 @@ public:
    * \param[in] border Number of pixels in the full Image edges we never modify.
    * \param[in] margin Number of pixels we overlap adjacent tiles (read-only).
    */
-  TypedImageTile(
+  ImageTile(
       const Point& imageSize, const Point& topLeft, const Point& size,
       unsigned int border, unsigned int margin)
     : mImageSize(imageSize), mTopLeft(topLeft), mSize(size),

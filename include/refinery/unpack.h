@@ -8,14 +8,14 @@ namespace refinery {
 
 class ExifData;
 
-template<typename T> class TypedImage;
+template<typename T> class Image;
 template<typename T> class GrayPixel;
-typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
+typedef Image<GrayPixel<unsigned short> > GrayImage;
 template<typename T> class RGBPixel;
-typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
+typedef Image<RGBPixel<unsigned short> > RGBImage;
 
 /**
- * Returns TypedImage instances based on stream input and Exif data.
+ * Returns Image instances based on stream input and Exif data.
  *
  * When reading is done, the stream will be seeked one byte past the last
  * byte in the image.
