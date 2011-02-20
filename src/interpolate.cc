@@ -12,7 +12,7 @@
 namespace refinery {
 
 namespace {
-  void interpolateBorder(Image& rgbImage, const GrayImage& image, int border) {
+  void interpolateBorder(RGBImage& rgbImage, const GrayImage& image, int border) {
     const int width = image.width(), height = image.height();
     const int top = 0, left = 0, right = width, bottom = height;
 
@@ -32,15 +32,15 @@ namespace {
             if (x < left || x >= right) continue;
 
             Point p(y, x);
-            Image::ColorType c = image.colorAtPoint(p);
+            RGBImage::ColorType c = image.colorAtPoint(p);
             sum[c] += image.constPixelAtPoint(p).value();
             count[c]++;
           }
         }
 
         Point curP(row, col);
-        Image::ColorType curC = image.colorAtPoint(curP);
-        for (Image::ColorType c = 0; c < 3; c++) {
+        RGBImage::ColorType curC = image.colorAtPoint(curP);
+        for (RGBImage::ColorType c = 0; c < 3; c++) {
           if (c == curC) {
             rgbImage.pixelAtPoint(curP)[c] =
                 image.constPixelAtPoint(curP).value();
@@ -111,10 +111,10 @@ class BilinearInterpolator {
   };
 
 public:
-  Image* interpolate(const GrayImage& image) {
-    std::auto_ptr<Image> rgbImagePtr(
-        new Image(image.cameraData(), image.width(), image.height()));
-    Image& rgbImage(*rgbImagePtr);
+  RGBImage* interpolate(const GrayImage& image) {
+    std::auto_ptr<RGBImage> rgbImagePtr(
+        new RGBImage(image.cameraData(), image.width(), image.height()));
+    RGBImage& rgbImage(*rgbImagePtr);
 
     interpolateBorder(rgbImage, image, 1);
 
@@ -132,7 +132,7 @@ public:
     const PixelsInstructions pixelsInstructions(image);
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
+      RGBImage::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
       const GrayImage::PixelType* grayPix(image.constPixelsAtPoint(row, left));
 
       for (unsigned int col = left; col < right; col++, pix++, grayPix++) {
@@ -156,7 +156,7 @@ public:
           const unsigned int division = instructions.divisions[colorIndex];
 
           pix[0][color] =
-              static_cast<Image::ValueType>(sums[color] * division >> 8);
+              static_cast<RGBImage::ValueType>(sums[color] * division >> 8);
         }
       }
     }
@@ -188,7 +188,7 @@ private:
   typedef TypedImage<HomogeneityPixel> HomogeneityImage;
   typedef TypedImageTile<HomogeneityImage> HomogeneityTile;
 
-  typedef TypedImageTile<Image> ImageTile;
+  typedef TypedImageTile<RGBImage> ImageTile;
 
   typedef RGBImage::ColorType Color;
 
@@ -248,9 +248,9 @@ private:
    *
    * bound1 is the min and bound2 is the max, or vice-versa.
    */
-  Image::ValueType bound(
-      const Image::ValueType& v,
-      const Image::ValueType& bound1, const Image::ValueType& bound2)
+  RGBImage::ValueType bound(
+      const RGBImage::ValueType& v,
+      const RGBImage::ValueType& bound1, const RGBImage::ValueType& bound2)
   {
     return std::min(
       std::max(bound1, std::min(v, bound2)),
@@ -293,12 +293,12 @@ private:
       for (; col < right;
           col += 2, pix += 2, hPix += 2, vPix += 2,
           pixAbove += 2, pix2Above += 2, pixBelow += 2, pix2Below += 2) {
-        Image::ValueType hValue =
+        RGBImage::ValueType hValue =
           ((pix[-1].value() + pix[0].value() + pix[1].value()) * 2 // G, c, G
            - pix[-2].value() - pix[2].value()) >> 2; // c, c
         hPix[0].g() = bound(hValue, pix[-1].value(), pix[1].value()); // G, G
 
-        Image::ValueType vValue =
+        RGBImage::ValueType vValue =
           ((pixAbove[0].value() + pix[0].value() + pixBelow[0].value()) * 2 // G, c, G
             - pix2Above[0].value() - pix2Below[0].value()) >> 2; // c, c
         vPix[0].g() = bound(vValue, pixAbove[0].value(), pixBelow[0].value()); // G, G
@@ -306,7 +306,7 @@ private:
     }
   }
 
-  Image::ValueType clamp16(int val) {
+  RGBImage::ValueType clamp16(int val) {
     // Assume right-shift of signed values leaves 1s, not 0s
     const unsigned int trashBits = val >> 16;
     return trashBits ? (~trashBits >> 16) : val;
@@ -448,7 +448,7 @@ private:
   }
 
   void rgbToLab(
-      const Image::PixelType& rgb, LABImage::PixelType& lab,
+      const RGBImage::PixelType& rgb, LABImage::PixelType& lab,
       const float (&cameraToXyz)[3][4])
   {
     float cbrtX = xyz64Cbrt(0.5f
@@ -580,7 +580,7 @@ private:
   }
 
   void fillImage(
-      Image& rgbImage, const ImageTile& hImageTile, const ImageTile& vImageTile,
+      RGBImage& rgbImage, const ImageTile& hImageTile, const ImageTile& vImageTile,
       HomogeneityTile& homoTile)
   {
     const unsigned int top = hImageTile.top() + 3;
@@ -613,7 +613,7 @@ private:
     }
 
     for (unsigned int row = top; row < bottom; row++) {
-      Image::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
+      RGBImage::PixelType* pix(rgbImage.pixelsAtPoint(row, left));
 
       const HomogeneityTile::PixelType* homoPix(
           homoTile.constPixelsAtImageCoords(row, left));
@@ -638,7 +638,7 @@ private:
   }
 
 public:
-  Image* interpolate(const GrayImage& image) {
+  RGBImage* interpolate(const GrayImage& image) {
     const unsigned int border = 5;
 
     const Camera::ColorConversionData colorData(
@@ -651,9 +651,9 @@ public:
       }
     }
 
-    std::auto_ptr<Image> rgbImagePtr(new Image(
+    std::auto_ptr<RGBImage> rgbImagePtr(new RGBImage(
           image.cameraData(), image.width(), image.height()));
-    Image& rgbImage(*rgbImagePtr);
+    RGBImage& rgbImage(*rgbImagePtr);
 
     interpolateBorder(rgbImage, image, border);
 
@@ -725,7 +725,7 @@ Interpolator::Interpolator(const Interpolator::Type& type)
 {
 }
 
-Image* Interpolator::interpolate(const GrayImage& image)
+RGBImage* Interpolator::interpolate(const GrayImage& image)
 {
   switch (mType) {
     case INTERPOLATE_AHD:

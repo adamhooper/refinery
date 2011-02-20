@@ -5,7 +5,7 @@ namespace refinery {
 
 template<typename T> class RGBPixel;
 template<typename T> class TypedImage;
-typedef TypedImage<RGBPixel<unsigned short> > Image;
+typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
 
 template<typename T> class TypedImageTile {
 public:
