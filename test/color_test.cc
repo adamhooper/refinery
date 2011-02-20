@@ -59,15 +59,4 @@ TYPED_TEST(ColorConverterTest, ConvertOnly3) {
   EXPECT_EQ(62.0, outDouble[2]);
 }
 
-TYPED_TEST(ColorConverterTest, DefaultCtor) {
-  typename TestFixture::ConverterType aConverter;
-  const double inDouble[4] = { 1.0, 2.0, 3.0, 4.0 };
-  double outDouble[3] = { 1.0, 2.0, 3.0 };
-
-  aConverter.convert(inDouble, outDouble);
-  EXPECT_EQ(0.0, outDouble[0]);
-  EXPECT_EQ(0.0, outDouble[1]);
-  EXPECT_EQ(0.0, outDouble[2]);
-}
-
 } // namespace
