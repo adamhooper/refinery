@@ -9,18 +9,18 @@ namespace refinery {
 /**
  * Says, for each color, how many of a picture's pixels hold each value.
  *
- * The Coarseness parameter decides to what extent pixels will be "grouped"
+ * The TCoarseness parameter decides to what extent pixels will be "grouped"
  * into histogram slots. For example, a Coarseness of 3 on an unsigned short
  * value means the histogram will have 2^13 slots, rather than 2^16
  * (because 16 - 3 = 13). The first green slot in the histogram will sum the
  * number of pixels with green values from 0 to 7 (7 = 2^3 - 1). A
- * Coarseness of 0 makes for an exact (but sometimes slower or less handy)
+ * TCoarseness of 0 makes for an exact (but sometimes slower or less handy)
  * histogram.
  *
  * \tparam ImageType Image instance.
- * \tparam Coarseness Shrinking option. For 16-bit Image, 3 is nice.
+ * \tparam TCoarseness Shrinking option. For 16-bit Image, 3 is nice.
  */
-template<typename ImageType, unsigned int Coarseness = 0>
+template<typename ImageType, unsigned int TCoarseness = 0>
 class Histogram {
 public:
   /** Value type of each pixel color, for instance "unsigned short". */
@@ -29,6 +29,8 @@ public:
   typedef typename ImageType::PixelType PixelType;
   /** Color type, that is, index type. */
   typedef typename ImageType::ColorType ColorType;
+  /** Coarseness. */
+  static const unsigned int Coarseness = TCoarseness;
   /** Number of colors per pixel. */
   static const ColorType NColors = PixelType::NColors;
 
