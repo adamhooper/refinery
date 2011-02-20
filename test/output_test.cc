@@ -35,7 +35,7 @@ TEST(ImageWriterTest, WritePpm16Bit) {
   std::ostringstream out(std::ios::binary | std::ios::out);
 
   refinery::ImageWriter writer;
-  writer.writeImage(image, out, "PPM", 16);
+  writer.writeImage(image, out, 16);
 
   std::string s(out.str());
   EXPECT_EQ("P6\n", s.substr(0, 3));
@@ -65,7 +65,7 @@ TEST(ImageWriterTest, WritePpm8Bit) {
   std::ostringstream out(std::ios::binary | std::ios::out);
 
   refinery::ImageWriter writer;
-  writer.writeImage(image, out, "PPM", 8);
+  writer.writeImage(image, out, 8);
 
   std::string s(out.str());
   EXPECT_EQ("P6\n", s.substr(0, 3));

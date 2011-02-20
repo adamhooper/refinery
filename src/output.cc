@@ -79,29 +79,18 @@ public:
 #include <iostream>
 
 void ImageWriter::writeImage(
-    const Image& image, std::ostream& ostream, const char* type,
-    unsigned int colorDepth)
+    const Image& image, std::ostream& ostream, unsigned int colorDepth)
 {
-  if (!type) type = "ppm";
-
-  std::string stype(type);
-  boost::algorithm::to_upper(stype);
-
-  if (stype == "PPM") {
-    PpmImageWriter(ostream).writeImage(image, colorDepth);
-  } else {
-    throw "FIXME";
-  }
+  PpmImageWriter(ostream).writeImage(image, colorDepth);
 }
 
 void ImageWriter::writeImage(
-    const Image& image, const char* filename, const char* type,
-    unsigned int colorDepth)
+    const Image& image, const char* filename, unsigned int colorDepth)
 {
   std::ofstream out(
       filename,
       std::ios::out | std::ios::binary | std::ios::trunc);
-  writeImage(image, out, type, colorDepth);
+  writeImage(image, out, colorDepth);
 }
 
 } // namespace refinery

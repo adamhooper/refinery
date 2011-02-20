@@ -146,7 +146,7 @@ def convert(infile, outfile):
   else:
     print('Writing image to %s... (8-bit PPM)' % outfile)
     writer = refinery.ImageWriter()
-    writer.writeImage(rgbImage, outfile, 'PPM', 8)
+    writer.writeImage(rgbImage, outfile, 8)
 
   print('Done!')
 

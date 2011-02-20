@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   gammaFilter.filter(image, gammaCurve);
 
   ImageWriter writer;
-  writer.writeImage(image, argv[2], "PPM", 8);
+  writer.writeImage(image, argv[2], 8);
 
   return 0;
 }
