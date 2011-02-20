@@ -207,31 +207,6 @@ namespace unpack {
       return exifData.getInt("Exif.SubImage2.StripOffsets");
     }
 
-    unsigned int getFilters(const ExifData& exifData)
-    {
-      /*
-       * If Exif.SubImage2.CFAPattern == 1 2 0 1, that means we look like this:
-       *   GRGRGRGR...
-       *   BGBGBGBG...
-       *   GRGRGRGR...
-       *   BGBGBGBG...
-       *   ...
-       */
-      std::vector<unsigned char> bytes;
-      exifData.getBytes("Exif.SubImage2.CFAPattern", bytes);
-
-      // XXX no idea if this is right--just that Nikon D5000 is 0x49494949
-      unsigned int filters =
-          ((bytes[0] << 6) & 0xc0)
-          | ((bytes[2] << 4) & 0x30)
-          | ((bytes[1] << 2) & 0xc)
-          | (bytes[3] & 0x3);
-
-      filters = filters << 24 | filters << 16 | filters << 8 | filters;
-
-      return filters;
-    }
-
     /*
      * Returns a Huffman decoder from the input stream.
      *
@@ -310,15 +285,12 @@ namespace unpack {
       vpred[1][0] = curve.vpred[1][0];
       vpred[1][1] = curve.vpred[1][1];
 
-      unsigned int filters = getFilters(exifData);
-
       is.pubseekoff(getDataOffset(exifData), std::ios::beg);
 
       std::auto_ptr<GrayImage> imagePtr(
           new GrayImage(cameraData, width, height));
       GrayImage& image(*imagePtr);
 
-      image.setFilters(filters);
       image.setBytesPerPixel(6);
 
       std::auto_ptr<HuffmanDecoder> decoder(getDecoder(is, exifData));

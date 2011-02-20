@@ -643,6 +643,10 @@ namespace CameraModels {
     {
       return 1;
     }
+    virtual unsigned int filters(const ExifData& exifData) const
+    {
+      return 0x55555555;
+    }
     virtual unsigned int colors() const { return 3; }
     virtual ColorConversionData colorConversionData() const
     {
@@ -658,12 +662,47 @@ namespace CameraModels {
     virtual const char* model() const { return "D5000"; }
     virtual unsigned int colors() const { return 3; }
     virtual unsigned int orientation(const ExifData& exifData) const {
+      static const char* KEY = "Exif.Image.Orientation";
+
+      if (!exifData.hasKey(KEY)) {
+        return 1;
+      }
+
       return exifData.getInt("Exif.Image.Orientation");
     }
+    virtual unsigned int filters(const ExifData& exifData) const {
+      /*
+       * If Exif.SubImage2.CFAPattern == 1 2 0 1, that means we look like this:
+       *   GRGRGRGR...
+       *   BGBGBGBG...
+       *   GRGRGRGR...
+       *   BGBGBGBG...
+       *   ...
+       */
+      static const char* KEY = "Exif.SubImage2.CFAPattern";
+
+      if (!exifData.hasKey(KEY)) {
+        return 0x55555555;
+      }
+
+      std::vector<unsigned char> bytes;
+      exifData.getBytes(KEY, bytes);
+
+      // XXX no idea if this is right--just that Nikon D5000 is 0x49494949
+      unsigned int filters =
+        ((bytes[0] << 6) & 0xc0)
+        | ((bytes[2] << 4) & 0x30)
+        | ((bytes[1] << 2) & 0xc)
+        | (bytes[3] & 0x3);
+
+      filters = filters << 24 | filters << 16 | filters << 8 | filters;
+
+      return filters;
+    }
     virtual bool canHandle(const ExifData& exifData) const {
-      const char* key = "Exif.Image.Model";
-      const char* test = "NIKON D5000";
-      return exifData.hasKey(key) && exifData.getString(key) == test;
+      static const char* KEY = "Exif.Image.Model";
+      static const char* TEST = "NIKON D5000";
+      return exifData.hasKey(KEY) && exifData.getString(KEY) == TEST;
     }
   };
 } // namespace CameraModels
@@ -671,6 +710,11 @@ namespace CameraModels {
 unsigned int CameraData::orientation() const
 {
   return mCamera.orientation(mExifData);
+}
+
+unsigned int CameraData::filters() const
+{
+  return mCamera.filters(mExifData);
 }
 
 unsigned int CameraData::colors() const

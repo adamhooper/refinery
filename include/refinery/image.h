@@ -3,7 +3,6 @@
 
 #include <refinery/camera.h>
 
-#include <cstddef>
 #include <vector>
 
 namespace refinery {
@@ -124,7 +123,7 @@ private:
 public:
   TypedImage(const CameraData& cameraData, int width, int height)
     : mCameraData(cameraData), mWidth(width), mHeight(height), mBpp(0),
-    mFilters(0)
+    mFilters(mCameraData.filters())
   {
     this->allocate();
   }
@@ -133,8 +132,8 @@ public:
   unsigned int width() const { return mWidth; }
   unsigned int height() const { return mHeight; }
   unsigned int nPixels() const { return mWidth * mHeight; }
-  int bytesPerPixel() const { return mBpp; }
   unsigned int filters() const { return mFilters; }
+  int bytesPerPixel() const { return mBpp; }
   void setBytesPerPixel(int bpp) { mBpp = bpp; }
   void setFilters(unsigned int filters) { mFilters = filters; }
 
