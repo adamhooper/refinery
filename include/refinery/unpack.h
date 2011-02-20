@@ -12,7 +12,7 @@ template<typename T> class TypedImage;
 template<typename T> class GrayPixel;
 typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
 template<typename T> class RGBPixel;
-typedef TypedImage<RGBPixel<unsigned short> > Image;
+typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
 
 class ImageReader {
 public:
@@ -37,10 +37,10 @@ public:
       FILE* istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
 
-  Image* readRgbImage(
+  RGBImage* readRgbImage(
       std::streambuf& istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
-  Image* readRgbImage(
+  RGBImage* readRgbImage(
       FILE* istream, const char* mimeType,
       int width, int height, const ExifData& exifData);
 };

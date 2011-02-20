@@ -199,8 +199,6 @@ typedef TypedImage<u16RGBPixel> RGBImage;
 typedef TypedImage<s16LABPixel> LABImage;
 typedef TypedImage<u16GrayPixel> GrayImage;
 
-typedef RGBImage Image;
-
 }; /* namespace refinery */
 
 #endif /* REFINERY_IMAGE_H */

@@ -1,32 +1,24 @@
 #include "refinery/output.h"
 
-#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <string>
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/shared_ptr.hpp>
 
 #include "refinery/image.h"
 
-typedef unsigned short uint16_t;
-
 namespace refinery {
-
-using boost::shared_ptr;
 
 class PpmImageWriter {
   std::ostream& mOutput;
   std::streambuf& mOutputStream;
 
-  void writePixel8Bit(const Image::PixelType& rgb)
+  void writePixel8Bit(const RGBImage::PixelType& rgb)
   {
     mOutputStream.sputc(rgb.r() >> 8);
     mOutputStream.sputc(rgb.g() >> 8);
     mOutputStream.sputc(rgb.b() >> 8);
   }
 
-  void writePixel16Bit(const Image::PixelType& rgb)
+  void writePixel16Bit(const RGBImage::PixelType& rgb)
   {
     mOutputStream.sputc(rgb.r() >> 8);
     mOutputStream.sputc(rgb.r() & 0xff);
@@ -36,10 +28,10 @@ class PpmImageWriter {
     mOutputStream.sputc(rgb.b() & 0xff);
   }
 
-  void writeImageBytes8Bit(const Image& image)
+  void writeImageBytes8Bit(const RGBImage& image)
   {
-    const Image::PixelType* pixel(image.constPixels());
-    const Image::PixelType* endPixel(image.constPixelsEnd());
+    const RGBImage::PixelType* pixel(image.constPixels());
+    const RGBImage::PixelType* endPixel(image.constPixelsEnd());
 
     while (pixel < endPixel) {
       writePixel8Bit(*pixel);
@@ -47,10 +39,10 @@ class PpmImageWriter {
     }
   }
 
-  void writeImageBytes16Bit(const Image& image)
+  void writeImageBytes16Bit(const RGBImage& image)
   {
-    const Image::PixelType* pixel(image.constPixels());
-    const Image::PixelType* endPixel(image.constPixelsEnd());
+    const RGBImage::PixelType* pixel(image.constPixels());
+    const RGBImage::PixelType* endPixel(image.constPixelsEnd());
 
     while (pixel < endPixel) {
       writePixel16Bit(*pixel);
@@ -62,7 +54,7 @@ public:
   PpmImageWriter(std::ostream& output)
     : mOutput(output), mOutputStream(*(output.rdbuf())) {}
 
-  void writeImage(const Image& image, unsigned int colorDepth)
+  void writeImage(const RGBImage& image, unsigned int colorDepth)
   {
     mOutput << "P6\n";
     mOutput << image.width() << " " << image.height() << "\n";
@@ -79,13 +71,13 @@ public:
 #include <iostream>
 
 void ImageWriter::writeImage(
-    const Image& image, std::ostream& ostream, unsigned int colorDepth)
+    const RGBImage& image, std::ostream& ostream, unsigned int colorDepth)
 {
   PpmImageWriter(ostream).writeImage(image, colorDepth);
 }
 
 void ImageWriter::writeImage(
-    const Image& image, const char* filename, unsigned int colorDepth)
+    const RGBImage& image, const char* filename, unsigned int colorDepth)
 {
   std::ofstream out(
       filename,

@@ -31,10 +31,10 @@ TEST(InterpolatorTest, AHDInterpolate) {
       reinterpret_cast<unsigned short*>(grayImage.pixels()));
 
   refinery::Interpolator interpolator(refinery::Interpolator::INTERPOLATE_AHD);
-  std::auto_ptr<refinery::Image> imagePtr(interpolator.interpolate(grayImage));
-  const refinery::Image& image(*imagePtr);
+  std::auto_ptr<refinery::RGBImage> imagePtr(interpolator.interpolate(grayImage));
+  const refinery::RGBImage& image(*imagePtr);
 
-  refinery::Image ref(cameraData, 225, 75);
+  refinery::RGBImage ref(cameraData, 225, 75);
   ref.setBytesPerPixel(3);
 
   std::ifstream f;
@@ -71,7 +71,7 @@ TEST(InterpolatorTest, AHDInterpolate) {
           static_cast<unsigned short>(static_cast<unsigned char>(msb)) << 8
           | static_cast<unsigned char>(lsb);
 
-      const refinery::Image::PixelType p(image.constPixelAtPoint(row, col));
+      const refinery::RGBImage::PixelType p(image.constPixelAtPoint(row, col));
       if (nFailures < 3) {
         EXPECT_EQ(refPixel.r, p.r()) << "(" << row << ", " << col << ")";
         EXPECT_EQ(refPixel.g, p.g()) << "(" << row << ", " << col << ")";

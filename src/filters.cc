@@ -40,8 +40,8 @@ namespace {
         PixelType* pix(mImage.pixelsAtRow(row));
         const PixelType* lastPixel(mImage.constPixelsAtPoint(row, width - 1));
 
-        Image::ColorType c1 = mImage.colorAtPoint(Point(row, 0));
-        Image::ColorType c2 = mImage.colorAtPoint(Point(row, 1));
+        RGBImage::ColorType c1 = mImage.colorAtPoint(Point(row, 0));
+        RGBImage::ColorType c2 = mImage.colorAtPoint(Point(row, 1));
 
         double multiplier1 = colorData.scalingMultipliers[c1];
         double multiplier2 = colorData.scalingMultipliers[c2];

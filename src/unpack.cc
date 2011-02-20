@@ -20,7 +20,7 @@ namespace unpack {
     virtual GrayImage* unpackGrayImage(
         std::streambuf& is, int width, int height,
         const ExifData& exifData) = 0;
-    virtual Image* unpackRgbImage(
+    virtual RGBImage* unpackRgbImage(
         std::streambuf& is, int width, int height,
         const ExifData& exifData) = 0;
   };
@@ -76,7 +76,7 @@ namespace unpack {
     }
 
   public:
-    virtual Image* unpackRgbImage(
+    virtual RGBImage* unpackRgbImage(
         std::streambuf& is, int width, int height, const ExifData& exifData)
     {
       // This will give a NullCamera
@@ -86,12 +86,12 @@ namespace unpack {
       int bpp;
       unpackHeader(is, width, height, bpp);
 
-      std::auto_ptr<Image> image(new Image(cameraData, width, height));
+      std::auto_ptr<RGBImage> image(new RGBImage(cameraData, width, height));
       image->setBytesPerPixel(bpp);
 
       unsigned int nValues =
           image->width() * image->height()
-          * image->bytesPerPixel() / sizeof(Image::ValueType);
+          * image->bytesPerPixel() / sizeof(RGBImage::ValueType);
 
       unsigned short* shorts(
           reinterpret_cast<unsigned short*>(&image->pixels()[0]));
@@ -333,7 +333,7 @@ namespace unpack {
       return imagePtr.release();
     }
 
-    virtual Image* unpackRgbImage(
+    virtual RGBImage* unpackRgbImage(
         std::streambuf& is, int width, int height, const ExifData& exifData)
     {
       return 0;
@@ -401,7 +401,7 @@ GrayImage* ImageReader::readGrayImage(
   return readGrayImage(istreambuf, mimeType, width, height, exifData);
 }
 
-Image* ImageReader::readRgbImage(
+RGBImage* ImageReader::readRgbImage(
     std::streambuf& istream, const char* mimeType,
     int width, int height, const ExifData& exifData)
 {
@@ -411,7 +411,7 @@ Image* ImageReader::readRgbImage(
   return unpacker->unpackRgbImage(istream, width, height, exifData);
 }
 
-Image* ImageReader::readRgbImage(
+RGBImage* ImageReader::readRgbImage(
     FILE* istream, const char* mimeType,
     int width, int height, const ExifData& exifData)
 {

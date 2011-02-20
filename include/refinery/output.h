@@ -7,7 +7,7 @@ namespace refinery {
 
 template<typename T> class RGBPixel;
 template<typename T> class TypedImage;
-typedef TypedImage<RGBPixel<unsigned short> > Image;
+typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
 
 /**
  * Outputs images in PPM format.
@@ -26,7 +26,7 @@ public:
    * \param[in] colorDepth 8 or 16, for 8-bit or 16-bit output.
    */
   void writeImage(
-      const Image& image, std::ostream& ostream, unsigned int colorDepth = 8);
+      const RGBImage& image, std::ostream& ostream, unsigned int colorDepth = 8);
 
   /**
    * Writes an image as PPM to an output stream.
@@ -36,7 +36,7 @@ public:
    * \param[in] colorDepth 8 or 16, for 8-bit or 16-bit output.
    */
   void writeImage(
-      const Image& image, const char* filename, unsigned int colorDepth = 8);
+      const RGBImage& image, const char* filename, unsigned int colorDepth = 8);
 };
 
 } // namespace refinery

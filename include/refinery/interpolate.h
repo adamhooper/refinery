@@ -5,7 +5,7 @@ namespace refinery {
 
 template<typename T> class TypedImage;
 template<typename T> class RGBPixel;
-typedef TypedImage<RGBPixel<unsigned short> > Image;
+typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
 template<typename T> class GrayPixel;
 typedef TypedImage<GrayPixel<unsigned short> > GrayImage;
 
@@ -79,7 +79,7 @@ public:
    * \param[in] image Grayscale (from sensor data) image to interpolate.
    * \return A new, colorful image with the same width, height and Exif data.
    */
-  Image* interpolate(const GrayImage& image);
+  RGBImage* interpolate(const GrayImage& image);
 };
 
 } /* namespace */

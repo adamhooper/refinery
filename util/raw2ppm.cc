@@ -59,15 +59,15 @@ int main(int argc, char **argv)
   scaleFilter.filter(*grayImagePtr);
 
   Interpolator interpolator(Interpolator::INTERPOLATE_AHD);
-  std::auto_ptr<Image> imagePtr(interpolator.interpolate(*grayImagePtr));
+  std::auto_ptr<RGBImage> imagePtr(interpolator.interpolate(*grayImagePtr));
 
-  Image& image(*imagePtr);
+  RGBImage& image(*imagePtr);
 
   ConvertToRgbFilter rgbFilter;
   rgbFilter.filter(image);
 
-  Histogram<Image, 3> histogram(image);
-  GammaCurve<Image::ValueType> gammaCurve(histogram);
+  Histogram<RGBImage, 3> histogram(image);
+  GammaCurve<RGBImage::ValueType> gammaCurve(histogram);
   GammaFilter gammaFilter;
   gammaFilter.filter(image, gammaCurve);
 

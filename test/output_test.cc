@@ -19,7 +19,7 @@ class ImageWriterTest : public ::testing::Test {
 };
 
 TEST(ImageWriterTest, WritePpm16Bit) {
-  // Assume PPM input works and load up an Image
+  // Assume PPM input works and load up an RGBImage
   std::filebuf fb;
   fb.open(
       "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
@@ -27,9 +27,9 @@ TEST(ImageWriterTest, WritePpm16Bit) {
 
   refinery::ImageReader reader;
   refinery::InMemoryExifData exifData;
-  std::auto_ptr<refinery::Image> imagePtr(
+  std::auto_ptr<refinery::RGBImage> imagePtr(
       reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
-  refinery::Image& image(*imagePtr);
+  refinery::RGBImage& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
   std::ostringstream out(std::ios::binary | std::ios::out);
@@ -48,7 +48,7 @@ TEST(ImageWriterTest, WritePpm16Bit) {
 }
 
 TEST(ImageWriterTest, WritePpm8Bit) {
-  // Assume PPM input works and load up an Image
+  // Assume PPM input works and load up an RGBImage
   std::filebuf fb;
   fb.open(
       "./test/files/nikon_d5000_225x75_sample_ahd16.ppm",
@@ -57,9 +57,9 @@ TEST(ImageWriterTest, WritePpm8Bit) {
   refinery::ImageReader reader;
 
   refinery::InMemoryExifData exifData;
-  std::auto_ptr<refinery::Image> imagePtr(
+  std::auto_ptr<refinery::RGBImage> imagePtr(
       reader.readRgbImage(fb, "image/x-portable-pixmap", 0, 0, exifData));
-  refinery::Image& image(*imagePtr);
+  refinery::RGBImage& image(*imagePtr);
 
   // Now we have "image" so the test can begin.
   std::ostringstream out(std::ios::binary | std::ios::out);
