@@ -24,9 +24,12 @@ namespace refinery {
  * \section Installing
  *
  * <ol>
- *  <li>Download the source: <tt>git clone git://github.com/adamh/refinery.git</tt>
- *  <li>Install CMake and Boost: <tt>sudo apt-get install libboost-dev cmake</tt>
- *  <li>Change into the source directory and type <tt>cmake -D CMAKE_BUILD_TYPE=Release .</tt>
+ *  <li>Download the source:
+ *      <tt>git clone git://github.com/adamh/refinery.git</tt></li>
+ *  <li>Install CMake, Boost and GTest:
+ *      <tt>sudo apt-get install libboost-dev cmake libgtest-dev</tt></li>
+ *  <li>Change into the source directory and type
+ *      <tt>cmake -D CMAKE_BUILD_TYPE=Release .</tt></li>
  *  <li><tt>make</tt> (to change options, install and run <tt>ccmake</tt>).</li>
  *  <li><tt>sudo make install</tt></li>
  * </ol>
@@ -88,6 +91,11 @@ namespace refinery {
  *
  * This code is public domain, except for anything that links to Exiv2, which
  * is GPL.
+ *
+ * \section Help
+ *
+ * Look for help at http://adamh.github.com/refinery, http://adamhooper.com
+ * and adam@adamhooper.com.
  *
  * \example util/raw2ppm.cc
  * \example util/licensed/gpl/convert.py
