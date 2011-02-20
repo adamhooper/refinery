@@ -33,7 +33,7 @@ namespace {
 
             Point p(y, x);
             Image::ColorType c = image.colorAtPoint(p);
-            sum[c] += image.constPixelAtPoint(p).value;
+            sum[c] += image.constPixelAtPoint(p).value();
             count[c]++;
           }
         }
@@ -43,7 +43,7 @@ namespace {
         for (Image::ColorType c = 0; c < 3; c++) {
           if (c == curC) {
             rgbImage.pixelAtPoint(curP)[c] =
-                image.constPixelAtPoint(curP).value;
+                image.constPixelAtPoint(curP).value();
           } else if (count[c]) {
             rgbImage.pixelAtPoint(curP)[c] = sum[c] / count[c];
           }
@@ -147,7 +147,8 @@ public:
           const unsigned int adjColor = instructions.adjacentColors[adjIndex];
 
           sums[adjColor] +=
-              static_cast<unsigned int>(grayPix[adjOffset].value) << adjWeight;
+              static_cast<unsigned int>(grayPix[adjOffset].value())
+              << adjWeight;
         }
 
         for (unsigned int colorIndex = 0; colorIndex < 2; colorIndex++) {
@@ -293,14 +294,14 @@ private:
           col += 2, pix += 2, hPix += 2, vPix += 2,
           pixAbove += 2, pix2Above += 2, pixBelow += 2, pix2Below += 2) {
         Image::ValueType hValue =
-          ((pix[-1].value + pix[0].value + pix[1].value) * 2 // G, c, G
-           - pix[-2].value - pix[2].value) >> 2; // c, c
-        hPix[0].g() = bound(hValue, pix[-1].value, pix[1].value); // G, G
+          ((pix[-1].value() + pix[0].value() + pix[1].value()) * 2 // G, c, G
+           - pix[-2].value() - pix[2].value()) >> 2; // c, c
+        hPix[0].g() = bound(hValue, pix[-1].value(), pix[1].value()); // G, G
 
         Image::ValueType vValue =
-          ((pixAbove[0].value + pix[0].value + pixBelow[0].value) * 2 // G, c, G
-            - pix2Above[0].value - pix2Below[0].value) >> 2; // c, c
-        vPix[0].g() = bound(vValue, pixAbove[0].value, pixBelow[0].value); // G, G
+          ((pixAbove[0].value() + pix[0].value() + pixBelow[0].value()) * 2 // G, c, G
+            - pix2Above[0].value() - pix2Below[0].value()) >> 2; // c, c
+        vPix[0].g() = bound(vValue, pixAbove[0].value(), pixBelow[0].value()); // G, G
       }
     }
   }
@@ -334,14 +335,14 @@ private:
       const ImageTile::PixelType* dPixBelow)
   {
     const int colCValue =
-        pix[0].value + // G
-        ((pixAbove[0].value + pixBelow[0].value // colC, colC
+        pix[0].value() + // G
+        ((pixAbove[0].value() + pixBelow[0].value() // colC, colC
           - dPixAbove[0].g() - dPixBelow[0].g()) >> 1); // G, G
     dPix[0][colC] = clamp16(colCValue);
 
     const int rowCValue =
-        pix[0].value + // G
-        ((pix[-1].value + pix[1].value // rowC, rowC
+        pix[0].value() + // G
+        ((pix[-1].value() + pix[1].value() // rowC, rowC
           - dPix[-1].g() - dPix[1].g()) >> 1); // G, G
     dPix[0][rowC] = clamp16(rowCValue);
   }
@@ -356,8 +357,8 @@ private:
   {
     const int colCValue =
         dPix[0].g() + // G
-        ((pixAbove[-1].value + pixAbove[1].value // colC, colC
-          + pixBelow[-1].value + pixBelow[1].value // colC, colC
+        ((pixAbove[-1].value() + pixAbove[1].value() // colC, colC
+          + pixBelow[-1].value() + pixBelow[1].value() // colC, colC
           - dPixAbove[-1].g() - dPixAbove[1].g() // G, G
           - dPixBelow[-1].g() - dPixBelow[1].g() // G, G
           + 1) >> 2);
@@ -418,7 +419,7 @@ private:
       const GrayImage::PixelType* pixBelow(&pix[width]);
 
       for (unsigned int col = left + (c != G); col < right; col += 2) {
-        dPix[0].g() = pix[0].value; // see createGreenDirectionalImages comment
+        dPix[0].g() = pix[0].value(); // see createGreenDirectionalImages comment
 
         fillRandBinGPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -435,7 +436,7 @@ private:
       pixBelow = &pix[width];
 
       for (unsigned int col = left + (c == G); col < right; col += 2) {
-        dPix[0][rowC] = pix[0].value;
+        dPix[0][rowC] = pix[0].value();
 
         fillRandBinBorRPixel(
             dPix, rowC, colC, pix, pixAbove, pixBelow, dPixAbove, dPixBelow);
@@ -463,9 +464,9 @@ private:
         + cameraToXyz[2][1] * rgb.g()
         + cameraToXyz[2][2] * rgb.b());
 
-    lab.l = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
-    lab.a = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
-    lab.b = static_cast<LABImage::ValueType>(200.0f * (cbrtY - cbrtZ));
+    lab.l() = static_cast<LABImage::ValueType>(116.0f * cbrtY - (64.0f*16.0f));
+    lab.a() = static_cast<LABImage::ValueType>(500.0f * (cbrtX - cbrtY));
+    lab.b() = static_cast<LABImage::ValueType>(200.0f * (cbrtY - cbrtZ));
   }
 
   void createCielabImage(
@@ -536,11 +537,11 @@ private:
           for (unsigned int adjDir = 0; adjDir < 4; adjDir++) {
             const LABImageTile::PixelType* adjLabPix(labAdjPix[dir][adjDir]);
 
-            const int adjDiffL = dirLabPix[0].l - adjLabPix[0].l;
+            const int adjDiffL = dirLabPix[0].l() - adjLabPix[0].l();
             lDiff[dir][adjDir] = std::abs(adjDiffL);
 
-            const int adjDiffA = dirLabPix[0].a - adjLabPix[0].a;
-            const int adjDiffB = dirLabPix[0].b - adjLabPix[0].b;
+            const int adjDiffA = dirLabPix[0].a() - adjLabPix[0].a();
+            const int adjDiffB = dirLabPix[0].b() - adjLabPix[0].b();
             abDiff[dir][adjDir] = adjDiffA * adjDiffA + adjDiffB * adjDiffB;
 
             labAdjPix[dir][adjDir]++;

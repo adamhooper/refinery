@@ -47,13 +47,13 @@ namespace {
         double multiplier2 = colorData.scalingMultipliers[c2];
 
         while (pix < lastPixel) {
-          pix->value = clamp16(multiplier1 * pix->value);
+          pix->value() = clamp16(multiplier1 * pix->value());
           pix++;
-          pix->value = clamp16(multiplier2 * pix->value);
+          pix->value() = clamp16(multiplier2 * pix->value());
           pix++;
         }
         if (pix == lastPixel) {
-          pix->value = clamp16(multiplier1 * pix->value);
+          pix->value() = clamp16(multiplier1 * pix->value());
         }
       }
     }

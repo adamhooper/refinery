@@ -311,7 +311,7 @@ namespace unpack {
             throw std::invalid_argument(
                 "unpackImage: hpred[colIsOdd] + min >= max");
           }
-          rowPixels[col].value = curveTable[hpred[col]];
+          rowPixels[col].value() = curveTable[hpred[col]];
         }
 
         for (; col < width; col++) {
@@ -322,7 +322,7 @@ namespace unpack {
             throw std::invalid_argument(
                 "unpackImage: hpred[colIsOdd] + min >= max");
           }
-          rowPixels[col].value = curveTable[hpred[colIsOdd]];
+          rowPixels[col].value() = curveTable[hpred[colIsOdd]];
         }
       }
 

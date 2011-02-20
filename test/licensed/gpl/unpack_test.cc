@@ -65,22 +65,22 @@ TEST(ImageReaderTest, NikonD5000) {
   refinery::GrayImage::PixelType pixel;
 
   pixel = image.constPixelAtPoint(0, 0);
-  EXPECT_EQ(1127, pixel.value) << "pixel (0, 0)";
+  EXPECT_EQ(1127, pixel.value()) << "pixel (0, 0)";
 
   pixel = image.constPixelAtPoint(312, 512);
-  EXPECT_EQ(1522, pixel.value) << "pixel (312, 512)";
+  EXPECT_EQ(1522, pixel.value()) << "pixel (312, 512)";
 
   pixel = image.constPixelAtPoint(312, 513);
-  EXPECT_EQ(1704, pixel.value) << "pixel (312, 513)";
+  EXPECT_EQ(1704, pixel.value()) << "pixel (312, 513)";
 
   pixel = image.constPixelAtPoint(313, 512);
-  EXPECT_EQ(604, pixel.value) << "pixel (313, 512)";
+  EXPECT_EQ(604, pixel.value()) << "pixel (313, 512)";
 
   pixel = image.constPixelAtPoint(313, 513);
-  EXPECT_EQ(1529, pixel.value) << "pixel (313, 513)";
+  EXPECT_EQ(1529, pixel.value()) << "pixel (313, 513)";
 
   pixel = image.constPixelAtPoint(2867, 4309);
-  EXPECT_EQ(851, pixel.value) << "pixel (2867, 4309)";
+  EXPECT_EQ(851, pixel.value()) << "pixel (2867, 4309)";
 };
 
 TEST(ImageReaderTest, Ppm16Bit) {
