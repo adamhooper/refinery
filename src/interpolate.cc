@@ -224,6 +224,9 @@ public:
   }
 
 private:
+  typedef LABPixel<short> s16LabPixel;
+  typedef TypedImage<s16LABPixel> LABImage;
+  typedef TypedImageTile<LABImage> LABImageTile;
 
   /**
    * Returns cbrt(f/65536), unless f is <= 580 in which case it's a linear

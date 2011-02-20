@@ -3,16 +3,18 @@
 
 namespace refinery {
 
-template<typename T> class RGBPixel;
-template<typename T> class TypedImage;
-typedef TypedImage<RGBPixel<unsigned short> > RGBImage;
-
-template<typename T> class TypedImageTile {
+/**
+ * A scratch-pad partial Image with coordinate data to relate to a real one.
+ *
+ * \tparam T Image type.
+ */
+template<typename T>
+class TypedImageTile {
 public:
-  typedef T ImageType;
-  typedef typename T::PixelType PixelType;
-  typedef typename T::ValueType ValueType;
-  typedef typename T::ColorType ColorType;
+  typedef T ImageType; /**< Image type. */
+  typedef typename T::PixelType PixelType; /**< Pixel type. */
+  typedef typename T::ValueType ValueType; /**< Color value type. */
+  typedef typename T::ColorType ColorType; /**< Color index type. */
 
 private:
   typedef std::vector<PixelType> PixelsType;
@@ -34,6 +36,17 @@ private:
   }
 
 public:
+  /**
+   * Constructor.
+   *
+   * This will allocate memory corresponding to the \p size.
+   *
+   * \param[in] imageSize Pixel value one past the bottom-right of the Image.
+   * \param[in] topLeft Image-realm pixel corresponding to this tile's (0,0).
+   * \param[in] size Width and height of this tile.
+   * \param[in] border Number of pixels in the full Image edges we never modify.
+   * \param[in] margin Number of pixels we overlap adjacent tiles (read-only).
+   */
   TypedImageTile(
       const Point& imageSize, const Point& topLeft, const Point& size,
       unsigned int border, unsigned int margin)
@@ -43,56 +56,79 @@ public:
     this->allocate();
   }
 
+  /**
+   * Top pixel we can modify, relative to the full Image.
+   */
   unsigned int top() const {
     return std::max<unsigned int>(mTopLeft.row, mEdgeSize);
   }
+  /**
+   * Leftmost pixel we can modify, relative to the full Image.
+   */
   unsigned int left() const {
     return std::max<unsigned int>(mTopLeft.col, mEdgeSize);
   }
+  /**
+   * The number of pixel rows in the tile.
+   */
   unsigned int height() const {
     return mSize.row;
   }
+  /**
+   * Number of pixel columns in the tile.
+   */
   unsigned int width() const {
     return mSize.col;
   }
+  /**
+   * Bottom pixel we can modify, relative to the full Image.
+   */
   unsigned int bottom() const {
     return std::min<unsigned int>(
         mImageSize.row - mEdgeSize,
         mTopLeft.row + mSize.row);
   }
+  /**
+   * Rightmost pixel we can modify, relative to the full Image.
+   */
   unsigned int right() const {
     return std::min<unsigned int>(
         mImageSize.col - mEdgeSize,
         mTopLeft.col + mSize.col);
   }
 
+  /**
+   * Sets a new top-left, repurposing this scratch-pad.
+   */
   void setTopLeft(const Point& topLeft) { mTopLeft = topLeft; }
-  void setSize(int height, int width) {
-    Point newSize(height, width);
-    if (newSize != mSize) {
-      mSize = newSize;
-      this->allocate();
-    }
-  }
 
+  /**
+   * Pixel pointer in original image using this tile's relative coordinates.
+   */
   PixelType* pixelsAtImageCoords(const Point& point) {
     const ptrdiff_t offset(offsetForImagePoint(point));
     return &mPixels[offset];
   }
+  /**
+   * Pixel pointer in original image using this tile's relative coordinates.
+   */
   PixelType* pixelsAtImageCoords(int row, int col) {
     return pixelsAtImageCoords(Point(row, col));
   }
+  /**
+   * Pixel pointer in original image using this tile's relative coordinates.
+   */
   const PixelType* constPixelsAtImageCoords(const Point& point) const {
     const ptrdiff_t offset(offsetForImagePoint(point));
     return &mPixels[offset];
   }
+  /**
+   * Pixel pointer in original image using this tile's relative coordinates.
+   */
   const PixelType* constPixelsAtImageCoords(int row, int col) const {
     return constPixelsAtImageCoords(Point(row, col));
   }
 };
-
-typedef TypedImageTile<RGBImage> RGBImageTile;
-typedef TypedImageTile<LABImage> LABImageTile;
 
 }; /* namespace refinery */
 
