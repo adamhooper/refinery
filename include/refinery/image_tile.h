@@ -29,7 +29,7 @@ private:
     mPixels.assign(mSize.row * mSize.col, PixelType());
   }
 
-  ptrdiff_t offsetForImagePoint(const Point& imagePoint) const
+  std::ptrdiff_t offsetForImagePoint(const Point& imagePoint) const
   {
     Point tilePoint(imagePoint - mTopLeft);
     return tilePoint.row * mSize.col + tilePoint.col;
@@ -106,7 +106,7 @@ public:
    * Pixel pointer in original image using this tile's relative coordinates.
    */
   PixelType* pixelsAtImageCoords(const Point& point) {
-    const ptrdiff_t offset(offsetForImagePoint(point));
+    const std::ptrdiff_t offset(offsetForImagePoint(point));
     return &mPixels[offset];
   }
   /**
@@ -119,7 +119,7 @@ public:
    * Pixel pointer in original image using this tile's relative coordinates.
    */
   const PixelType* constPixelsAtImageCoords(const Point& point) const {
-    const ptrdiff_t offset(offsetForImagePoint(point));
+    const std::ptrdiff_t offset(offsetForImagePoint(point));
     return &mPixels[offset];
   }
   /**

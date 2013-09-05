@@ -118,8 +118,8 @@ public:
 
     interpolateBorder(rgbImage, image, 1);
 
-    const unsigned int width = image.width();
-    const unsigned int height = image.height();
+    const int width = image.width();
+    const int height = image.height();
 
     const unsigned int top = 1;
     const unsigned int bottom = height - 1;
@@ -741,6 +741,8 @@ RGBImage* Interpolator::interpolate(const GrayImage& image)
         BilinearInterpolator bilinearInterpolator;
         return bilinearInterpolator.interpolate(image);
       }
+    default:
+      return 0;
   }
 }
 

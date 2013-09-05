@@ -18,6 +18,8 @@ class ExifData;
  */
 class Camera {
 public:
+  virtual ~Camera() {}
+
   /**
    * These values are used in mapping from sensors to RGB, CMYK and XYZ.
    */
@@ -171,6 +173,8 @@ public:
    */
   CameraData(const Camera& camera, const ExifData& exifData)
       : mCamera(camera), mExifData(exifData) {}
+
+  virtual ~CameraData() {}
 
   /**
    * Copy constructor.

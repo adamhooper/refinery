@@ -13,7 +13,12 @@ TEST(HuffmanDecoderTest, NextValue) {
     5,4,3,6,2,7,1,0,8,9,11,10,12,0
   };
   const char buf[] = {
-    0xd2, 0xf5, 0x16, 0x14, 0xaa, 0xaa
+    static_cast<char>(0xd2),
+    static_cast<char>(0xf5),
+    static_cast<char>(0x16),
+    static_cast<char>(0x14),
+    static_cast<char>(0xaa),
+    static_cast<char>(0xaa)
   };
 
   std::string stringBuf(buf, sizeof(buf));
